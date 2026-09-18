@@ -126,9 +126,9 @@ du repository remonte telle quelle.
 
 ### Endpoint
 
-| Méthode | URL                   | Servi par                                                                                                        |
-| ------- | --------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `GET`   | `/youtube-stats.json` | relais vers `https://aylabs.fr/youtube-stats.json` : `server.proxy`/`preview.proxy` (Vite), `location =` (nginx) |
+| Méthode | URL                   | Servi par                                                                                                                                                                                                                                               |
+| ------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET`   | `/youtube-stats.json` | relais vers `https://aylabs.fr/youtube-stats.json` : `server.proxy`/`preview.proxy` (Vite) ; `location =` (nginx) vers `${YOUTUBE_STATS_UPSTREAM}` — `https://aylabs.fr` par défaut, `http://aylabs-site` en prod (conteneur voisin, réseau `pangolin`) |
 
 URL surchargeable par `VITE_YOUTUBE_STATS_URL` (au build). Format du fichier :
 `{ stats, videos: [{ json: { id, title, publishedAt, duration, thumbnails: { <taille>: { url } } } }] }`,
@@ -182,12 +182,12 @@ cassée (`onError`) → monogramme de l'initiale.
 
 ## Déploiement
 
-| Fichier                        | Rôle                                                                                                                                                       |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `.github/workflows/deploy.yml` | job `check` (lint, format, tests, build) sur push/PR ; job `docker-image` sur push `main` et manuel → `ghcr.io/<owner>/linktree` (`latest`, `sha-…`, date) |
-| `Dockerfile`                   | `node:24-alpine` build → `nginx:stable-alpine` port 80, `HEALTHCHECK` wget                                                                                 |
-| `docker/nginx.conf.template`   | fallback `index.html`, cache 1 an sur `/assets/`, `index.html` jamais en cache, en-têtes de sécurité, relais `/youtube-stats.json` → aylabs.fr             |
-| `docker-compose.yml`           | service `linktree`, port `${LINKTREE_PORT:-8082}:80` (8080/8081 = stack aylabs)                                                                            |
+| Fichier                        | Rôle                                                                                                                                                          |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.github/workflows/deploy.yml` | job `check` (lint, format, tests, build) sur push/PR ; job `docker-image` sur push `main` et manuel → `ghcr.io/<owner>/linktree` (`latest`, `sha-…`, date)    |
+| `Dockerfile`                   | `node:24-alpine` build → `nginx:stable-alpine` port 80, `HEALTHCHECK` wget                                                                                    |
+| `docker/nginx.conf.template`   | fallback `index.html`, cache 1 an sur `/assets/`, `index.html` jamais en cache, en-têtes de sécurité, relais `/youtube-stats.json` → `YOUTUBE_STATS_UPSTREAM` |
+| `docker-compose.yml`           | service `linktree`, port `${LINKTREE_PORT:-8082}:80` (8080/8081 = stack aylabs)                                                                               |
 
 ## Commandes
 
@@ -236,6 +236,17 @@ cassée (`onError`) → monogramme de l'initiale.
   au démarrage et nginx refuse de démarrer si le DNS n'est pas prêt. Seules les
   variables d'environnement **définies** sont substituées (`$uri` reste intact) —
   ne pas créer de variable d'env portant le nom d'une variable nginx.
+- **Relais en prod = conteneur voisin** : le compose du serveur (stack aylabs,
+  réseau externe `pangolin`) définit `YOUTUBE_STATS_UPSTREAM=http://aylabs-site`
+  — HTTP interne, ni Internet ni TLS, nom résolu par le DNS Docker
+  (`127.0.0.11`, repris de `/etc/resolv.conf`). La variable doit rester définie
+  (défaut `https://aylabs.fr` dans le Dockerfile) : non définie, `envsubst`
+  laisserait `${YOUTUBE_STATS_UPSTREAM}` en clair et nginx ne démarrerait pas.
+- **`proxy_ssl_verify_depth 4`** pour l'upstream HTTPS : le défaut nginx (1)
+  est trop court pour la chaîne Let's Encrypt d'aylabs.fr (aylabs.fr → YR1 →
+  Root YR → ISRG Root X1). Sinon : `upstream SSL certificate verify error:
+(20:unable to get local issuer certificate)` et 502 (2026-09-18). Ne pas
+  désactiver `proxy_ssl_verify` pour « réparer ».
 - **Pureté du rendu** (`react-hooks/purity`) : pas de `Date.now()` dans un
   composant ; l'instant de référence de « Publiée hier » vient du hook (`now`).
 - `.gitattributes` force LF : Prettier (`endOfLine: lf`) échouerait sinon en

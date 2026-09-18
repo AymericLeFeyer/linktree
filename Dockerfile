@@ -23,6 +23,10 @@ FROM nginx:stable-alpine
 # Gabarit traité au démarrage : fournit le résolveur DNS du relais
 # /youtube-stats.json (voir docker/nginx.conf.template).
 ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
+# Origine du relais, sans slash final. Surchargée en prod par le compose
+# (http://aylabs-site, conteneur voisin sur le réseau pangolin). Doit rester
+# définie : envsubst laisserait sinon le texte ${…} tel quel dans nginx.
+ENV YOUTUBE_STATS_UPSTREAM=https://aylabs.fr
 COPY docker/nginx.conf.template /etc/nginx/templates/default.conf.template
 
 WORKDIR /usr/share/nginx/html

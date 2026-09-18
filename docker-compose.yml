@@ -16,3 +16,8 @@ services:
     pull_policy: always
     ports:
       - "${LINKTREE_PORT:-8082}:80"
+    # Relais /youtube-stats.json : https://aylabs.fr par défaut (Dockerfile).
+    # Si le conteneur aylabs-site est sur le même réseau Docker, le joindre
+    # directement (ni Internet, ni TLS) :
+    # environment:
+    #   YOUTUBE_STATS_UPSTREAM: http://aylabs-site
