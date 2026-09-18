@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+/* Charte AyLabs — mêmes jetons que aylabs.fr (tailwind.config.js du site). */
+@theme {
+  --font-sans: Figtree, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Bricolage Grotesque", Figtree, system-ui, sans-serif;
+
+  --color-brand: #398fba;
+  --color-brand-bright: #5fb6de;
+  --color-brand-deep: #2a6d94;
+
+  --color-ink: #0c1319;
+  --color-ink-soft: #141f27;
+  --color-ink-line: #22323d;
+}
+
+@layer base {
+  html {
+    background-color: var(--color-ink);
+  }
+
+  body {
+    @apply bg-ink font-sans text-white antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display tracking-tight;
+  }
+}
+
+/* Trame technique du hero aylabs : grille fine, façon plan de câblage. */
+@utility bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(95, 182, 222, 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(95, 182, 222, 0.07) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* Entrée des cartes, décalée via --delay posée en style inline. */
+@utility animate-rise {
+  animation: rise 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  animation-delay: var(--delay, 0ms);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

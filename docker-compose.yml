@@ -1,0 +1,18 @@
+# Linktree AyLabs — image publiée sur GHCR par .github/workflows/deploy.yml
+# à chaque push sur main.
+#
+#   docker compose pull && docker compose up -d
+#
+# Le port est publié sur toutes les interfaces (et non sur 127.0.0.1) : un
+# reverse proxy lui-même conteneurisé ne pourrait pas joindre la boucle locale
+# de l'hôte. Le pare-feu du serveur doit fermer ce port depuis l'extérieur.
+# 8082 par défaut : 8080/8081 sont pris par la stack aylabs.
+
+services:
+  linktree:
+    image: ghcr.io/aymericlefeyer/linktree:latest
+    container_name: aylabs-linktree
+    restart: unless-stopped
+    pull_policy: always
+    ports:
+      - "${LINKTREE_PORT:-8082}:80"

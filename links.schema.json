@@ -1,0 +1,88 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Linktree AyLabs",
+  "description": "Contenu du site, lu au build. La validation qui fait foi est celle du build (src/domain/link/services/parseLinktree.ts) ; ce schéma sert à l'autocomplétion dans l'éditeur.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["profile", "links"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "siteUrl": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL publique du site (sans slash final). Sert à l'URL canonique et à l'image des aperçus de partage."
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "avatar"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "tagline": { "type": "string", "description": "Accroche sous le nom." },
+        "description": { "type": "string" },
+        "avatar": { "$ref": "#/definitions/image" }
+      }
+    },
+    "socials": {
+      "type": "array",
+      "description": "Icônes affichées sous le profil, dans cet ordre.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["platform", "url"],
+        "properties": {
+          "platform": {
+            "enum": [
+              "youtube",
+              "instagram",
+              "tiktok",
+              "discord",
+              "x",
+              "twitch",
+              "github",
+              "linkedin",
+              "email",
+              "website"
+            ]
+          },
+          "url": { "type": "string", "pattern": "^(https?:|mailto:|tel:)" },
+          "label": {
+            "type": "string",
+            "description": "Libellé accessible ; par défaut, le nom de la plateforme."
+          }
+        }
+      }
+    },
+    "links": {
+      "type": "array",
+      "description": "Les liens, affichés dans cet ordre.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title", "url"],
+        "properties": {
+          "title": { "type": "string", "minLength": 1 },
+          "description": { "type": "string" },
+          "url": { "type": "string", "pattern": "^(https?:|mailto:|tel:)" },
+          "image": { "$ref": "#/definitions/image" },
+          "featured": {
+            "type": "boolean",
+            "description": "Grande carte avec image pleine largeur (format 16:9)."
+          },
+          "expiresAt": {
+            "type": ["string", "null"],
+            "description": "Date de fin, jamais affichée. \"2026-10-31\" = visible jusqu'au 31 inclus ; \"2026-10-31T18:00\" = jusqu'à 18h. Heure de Paris.",
+            "pattern": "^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})?)?$"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "image": {
+      "type": "string",
+      "description": "Fichier de public/ (\"/links/promo.webp\") ou URL https.",
+      "pattern": "^(/[^/]|https?://)"
+    }
+  }
+}

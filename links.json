@@ -1,0 +1,67 @@
+{
+  "$schema": "./links.schema.json",
+  "profile": {
+    "name": "AyLabs",
+    "tagline": "La tech à la maison.",
+    "description": "Domotique, homelab, impression 3D… Je teste, j'installe, je partage.",
+    "avatar": "/aylabs.jpg"
+  },
+  "socials": [
+    { "platform": "youtube", "url": "https://youtube.com/@ay_labs" },
+    { "platform": "instagram", "url": "https://instagram.com/aylabs_yt" },
+    { "platform": "tiktok", "url": "https://www.tiktok.com/@ay_labs" },
+    { "platform": "discord", "url": "https://discord.gg/aylabs" },
+    { "platform": "github", "url": "https://github.com/aylabscode" },
+    { "platform": "email", "url": "mailto:contact@aylabs.fr" },
+    {
+      "platform": "website",
+      "url": "https://aylabs.fr",
+      "label": "Le site AyLabs"
+    }
+  ],
+  "links": [
+    {
+      "title": "Une idée de modélisation en tête ? Essayer MESHY",
+      "description": "De l'image single-view aux références multi-view — Meshy 7 comble l'écart entre votre image source et la génération 3D avec une précision inégalée sur toutes les métriques.",
+      "url": "https://www.meshy.ai/s/tUNsnB",
+      "image": "https://s3-eu-west-1.amazonaws.com/tpd/logos/673ed5d27a770a6694f82026/0x0.png",
+      "expiresAt": "2026-10-01"
+    },
+    {
+      "title": "Domadoo",
+      "description": "Domotique & objets connectés",
+      "url": "https://www.domadoo.fr/fr/?domid=79",
+      "image": "https://www.domadoo.fr/img/favicon.ico?1712752227"
+    },
+     {
+      "title": "Gladys Assistant",
+      "description": "Solution domotique française",
+      "url": "https://gladysassistant.com/fr/?utm_source=aylabs&utm_campaign=linktree",
+      "image": "https://gladysassistant.com/fr/img/logo.svg"
+    },
+    {
+      "title": "La documentation",
+      "description": "Guides écrits pour reproduire les installations des vidéos.",
+      "url": "https://docs.aylabs.fr",
+      "image": "https://docs.aylabs.fr/img/logo_black.svg"
+    },
+    {
+      "title": "Bonnes affaires",
+      "description": "Les codes promo et réductions du moment.",
+      "url": "https://aylabs.fr/deals",
+      "image": "https://em-content.zobj.net/source/apple/453/money-mouth-face_1f911.png"
+    },
+    {
+      "title": "Me soutenir",
+      "description": "Si mon travail t'aide, voici comment donner un coup de pouce.",
+      "url": "https://aylabs.fr/support",
+      "image": "https://em-content.zobj.net/source/apple/453/red-heart_2764-fe0f.png"
+    },
+    {
+      "title": "Mon setup",
+      "description": "Le matériel que j'utilise au quotidien.",
+      "url": "https://setup.aylabs.fr",
+      "image": "https://em-content.zobj.net/source/apple/453/desktop-computer_1f5a5-fe0f.png"
+    }
+  ]
+}
