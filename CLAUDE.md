@@ -105,6 +105,11 @@ Fonts dans `index.html`. Utilitaires maison : `bg-grid` (trame du hero aylabs),
 `animate-rise` (entrée décalée via la variable `--delay`). Pas de bibliothèque de
 composants : Tailwind + `lucide-react`.
 
+**Nouvel onglet** : cartes et icônes réseaux passent par `newTabProps(url)`
+(`src/shared/newTabProps.ts`) → `target="_blank" rel="noopener noreferrer"`,
+sauf `mailto:`/`tel:` qui restent dans l'onglet (sinon onglet vide laissé
+derrière). Tout nouveau lien sortant doit l'utiliser.
+
 Colonne unique `max-w-xl`. Deux variantes de carte dans `LinkCard` : compacte
 (vignette 64/72 px) et `featured` (image 16:9 pleine largeur). Image absente ou
 cassée (`onError`) → monogramme de l'initiale.

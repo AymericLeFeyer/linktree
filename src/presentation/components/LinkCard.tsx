@@ -1,6 +1,7 @@
 import { ArrowUpRight } from "lucide-react";
 import { useState, type CSSProperties } from "react";
 import type { Link } from "../../domain/link/entities/Linktree";
+import { newTabProps } from "../../shared/newTabProps";
 
 interface LinkCardProps {
   link: Link;
@@ -34,7 +35,12 @@ function FeaturedCard({ link, style, eager }: CardProps) {
   const showImage = link.image && !imageFailed;
 
   return (
-    <a href={link.url} className={`${cardBase} overflow-hidden`} style={style}>
+    <a
+      href={link.url}
+      {...newTabProps(link.url)}
+      className={`${cardBase} overflow-hidden`}
+      style={style}
+    >
       {showImage && (
         <div className="aspect-video overflow-hidden border-b border-ink-line bg-ink">
           <img
@@ -71,6 +77,7 @@ function CompactCard({ link, style, eager }: CardProps) {
   return (
     <a
       href={link.url}
+      {...newTabProps(link.url)}
       className={`${cardBase} flex items-center gap-4 p-3 pr-4`}
       style={style}
     >
