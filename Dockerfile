@@ -20,7 +20,10 @@ RUN npm run build
 
 FROM nginx:stable-alpine
 
-COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
+# Gabarit traité au démarrage : fournit le résolveur DNS du relais
+# /youtube-stats.json (voir docker/nginx.conf.template).
+ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
+COPY docker/nginx.conf.template /etc/nginx/templates/default.conf.template
 
 WORKDIR /usr/share/nginx/html
 RUN rm -rf ./*

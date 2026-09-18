@@ -1,10 +1,13 @@
+import { LatestVideoSection } from "../components/LatestVideoCard";
 import { LinkCard } from "../components/LinkCard";
 import { ProfileHeader } from "../components/ProfileHeader";
 import { SocialLinks } from "../components/SocialLinks";
+import { useLatestVideo } from "../hooks/useLatestVideo";
 import { useVisibleLinktree } from "../hooks/useVisibleLinktree";
 
 export function HomePage() {
   const { profile, socials, links } = useVisibleLinktree();
+  const latestVideo = useLatestVideo();
 
   return (
     <div className="relative isolate min-h-dvh overflow-hidden">
@@ -21,6 +24,7 @@ export function HomePage() {
       <main className="mx-auto flex w-full max-w-xl flex-col gap-8 px-4 pt-14 pb-10 sm:px-6 sm:pt-20">
         <ProfileHeader profile={profile} />
         <SocialLinks socials={socials} />
+        <LatestVideoSection state={latestVideo} />
 
         <section aria-label="Liens">
           {links.length > 0 ? (

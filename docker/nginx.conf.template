@@ -1,0 +1,68 @@
+# Gabarit : l'entrypoint de l'image nginx remplace ${NGINX_LOCAL_RESOLVERS}
+# (seules les variables d'environnement définies sont substituées, $uri & co
+# restent intacts) et écrit /etc/nginx/conf.d/default.conf.
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Page unique : toute URL inconnue retombe sur l'accueil.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # `expires` seul (et non add_header) : un add_header dans un location
+    # annulerait les en-têtes de sécurité hérités du bloc server.
+
+    # Les assets Vite portent un hash dans leur nom : cache long.
+    location /assets/ {
+        expires 1y;
+        try_files $uri =404;
+    }
+
+    # Jamais en cache : c'est lui qui pointe vers les nouveaux assets.
+    location = /index.html {
+        expires -1;
+    }
+
+    # Dernière vidéo : aylabs.fr ne renvoie pas d'en-tête CORS, on relaie donc
+    # le fichier sur notre origine. L'hôte passe par une variable pour être
+    # résolu à la requête et non au démarrage : sans DNS au boot, nginx
+    # refuserait de démarrer. NGINX_LOCAL_RESOLVERS vient de /etc/resolv.conf
+    # (NGINX_ENTRYPOINT_LOCAL_RESOLVERS dans le Dockerfile).
+    location = /youtube-stats.json {
+        resolver ${NGINX_LOCAL_RESOLVERS} valid=300s;
+        resolver_timeout 5s;
+        set $youtube_stats_upstream https://aylabs.fr;
+        proxy_pass $youtube_stats_upstream/youtube-stats.json;
+        proxy_ssl_server_name on;
+        proxy_ssl_verify on;
+        proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 10s;
+        proxy_set_header Cookie "";
+        proxy_hide_header Set-Cookie;
+        # Déjà posés par le bloc server : pas de doublons.
+        proxy_hide_header X-Content-Type-Options;
+        proxy_hide_header X-Frame-Options;
+        proxy_hide_header Referrer-Policy;
+    }
+
+    location ~* \.(jpe?g|png|webp|gif|svg|ico|avif)$ {
+        expires 30d;
+    }
+
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css application/javascript application/json image/svg+xml;
+
+    server_tokens off;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+}
