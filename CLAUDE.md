@@ -110,6 +110,12 @@ composants : Tailwind + `lucide-react`.
 sauf `mailto:`/`tel:` qui restent dans l'onglet (sinon onglet vide laissé
 derrière). Tout nouveau lien sortant doit l'utiliser.
 
+**Avatar** : photo ronde (`rounded-full object-cover`, donc une photo carrée plein
+cadre, pas un logo détouré) avec le badge `/logo-blue.png` en bas à droite, codé
+en dur dans `ProfileHeader` (`BADGE_SRC`, pas dans `links.json`). Le logo a le
+« AY » transparent → fond `bg-white` obligatoire ; `ring-4 ring-ink` fait la
+découpe sur la photo.
+
 Colonne unique `max-w-xl`. Deux variantes de carte dans `LinkCard` : compacte
 (vignette 64/72 px) et `featured` (image 16:9 pleine largeur). Image absente ou
 cassée (`onError`) → monogramme de l'initiale.

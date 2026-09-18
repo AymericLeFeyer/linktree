@@ -1,5 +1,7 @@
 import type { Profile } from "../../domain/link/entities/Linktree";
 
+const BADGE_SRC = "/logo-blue.png";
+
 export function ProfileHeader({ profile }: { profile: Profile }) {
   return (
     <header className="flex animate-rise flex-col items-center text-center">
@@ -12,7 +14,14 @@ export function ProfileHeader({ profile }: { profile: Profile }) {
         <img
           src={profile.avatar}
           alt=""
-          className="h-24 w-24 rounded-3xl border border-ink-line bg-ink-soft object-contain p-3 shadow-xl shadow-black/30 sm:h-28 sm:w-28"
+          className="h-28 w-28 rounded-full border-2 border-ink-line bg-ink-soft object-cover shadow-xl shadow-black/30 sm:h-32 sm:w-32"
+        />
+        {/* Badge AyLabs : le logo a des parties transparentes (le « AY »),
+            d'où le fond blanc ; l'anneau couleur de page le détache de la photo. */}
+        <img
+          src={BADGE_SRC}
+          alt=""
+          className="absolute right-0 bottom-0 h-9 w-9 rounded-full bg-white shadow-lg ring-4 ring-ink sm:h-10 sm:w-10"
         />
       </div>
 
