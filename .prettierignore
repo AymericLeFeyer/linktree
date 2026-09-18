@@ -1,3 +1,7 @@
 dist
 node_modules
 package-lock.json
+
+# Contenu édité à la main (souvent depuis GitHub) : sa mise en forme ne doit pas
+# bloquer la CI. Sa validité est contrôlée par le build (vite/linktreePlugin.ts).
+links.json

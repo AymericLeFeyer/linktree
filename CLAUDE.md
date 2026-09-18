@@ -150,6 +150,10 @@ cassée (`onError`) → monogramme de l'initiale.
 - **Captures headless** : Edge/Chrome headless impose ~500 px de largeur minimale ;
   pour vérifier le mobile, charger la page dans une `<iframe>` de 320/375 px
   servie depuis la même origine.
+- **`links.json` est exclu de Prettier** (`.prettierignore`) : il est édité à la
+  main, souvent depuis l'éditeur web de GitHub, et une indentation décalée faisait
+  échouer `format:check` en CI (2026-09-18) alors que le JSON était valide. Sa
+  validité est contrôlée par le build, pas par Prettier. Ne pas le réintégrer.
 - `.gitattributes` force LF : Prettier (`endOfLine: lf`) échouerait sinon en
   `format:check` sur un checkout Windows en CRLF.
 - Paquet GHCR créé **privé** au premier push : le rendre public ou
