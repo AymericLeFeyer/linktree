@@ -15,6 +15,13 @@ COPY vite ./vite
 COPY public ./public
 COPY src ./src
 
+# Aynalytics : clé PUBLIQUE du site (jamais la clé secrète), inlinée par Vite au
+# build. Vide = analytics désactivé. URL facultative (/_ay, proxy nginx, par défaut).
+ARG VITE_AYNALYTICS_URL=""
+ARG VITE_AYNALYTICS_SITE_KEY=""
+ENV VITE_AYNALYTICS_URL=$VITE_AYNALYTICS_URL
+ENV VITE_AYNALYTICS_SITE_KEY=$VITE_AYNALYTICS_SITE_KEY
+
 RUN npm run build
 
 

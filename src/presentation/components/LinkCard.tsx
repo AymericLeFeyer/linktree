@@ -1,6 +1,7 @@
 import { ArrowUpRight } from "lucide-react";
 import { useState, type CSSProperties } from "react";
 import type { Link } from "../../domain/link/entities/Linktree";
+import { trackLinkClick } from "../../shared/analytics/trackEvents";
 import { newTabProps } from "../../shared/newTabProps";
 
 interface LinkCardProps {
@@ -16,10 +17,11 @@ export function LinkCard({ link, index }: LinkCardProps) {
   const style = { "--delay": `${120 + index * 60}ms` } as CSSProperties;
   // Les premières cartes sont au-dessus de la ligne de flottaison.
   const eager = index < 3;
+  const onClick = () => trackLinkClick(link, index);
   return link.featured ? (
-    <FeaturedCard link={link} style={style} eager={eager} />
+    <FeaturedCard link={link} style={style} eager={eager} onClick={onClick} />
   ) : (
-    <CompactCard link={link} style={style} eager={eager} />
+    <CompactCard link={link} style={style} eager={eager} onClick={onClick} />
   );
 }
 
@@ -27,10 +29,11 @@ interface CardProps {
   link: Link;
   style: CSSProperties;
   eager: boolean;
+  onClick: () => void;
 }
 
 /** Lien mis en avant : image pleine largeur au format vidéo. */
-function FeaturedCard({ link, style, eager }: CardProps) {
+function FeaturedCard({ link, style, eager, onClick }: CardProps) {
   const [imageFailed, setImageFailed] = useState(false);
   const showImage = link.image && !imageFailed;
 
@@ -38,6 +41,7 @@ function FeaturedCard({ link, style, eager }: CardProps) {
     <a
       href={link.url}
       {...newTabProps(link.url)}
+      onClick={onClick}
       className={`${cardBase} overflow-hidden`}
       style={style}
     >
@@ -73,11 +77,12 @@ function FeaturedCard({ link, style, eager }: CardProps) {
 }
 
 /** Lien standard : vignette carrée à gauche, texte à droite. */
-function CompactCard({ link, style, eager }: CardProps) {
+function CompactCard({ link, style, eager, onClick }: CardProps) {
   return (
     <a
       href={link.url}
       {...newTabProps(link.url)}
+      onClick={onClick}
       className={`${cardBase} flex items-center gap-4 p-3 pr-4`}
       style={style}
     >

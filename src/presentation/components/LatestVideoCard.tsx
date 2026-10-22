@@ -1,6 +1,7 @@
 import { ArrowUpRight, Play } from "lucide-react";
 import { useState } from "react";
 import type { Video } from "../../domain/video/entities/Video";
+import { trackLatestVideoClick } from "../../shared/analytics/trackEvents";
 import { newTabProps } from "../../shared/newTabProps";
 import type { LatestVideoState } from "../hooks/useLatestVideo";
 import { SocialIcon } from "./SocialIcon";
@@ -40,6 +41,7 @@ function LatestVideoCard({ video, now }: { video: Video; now: number }) {
     <a
       href={video.url}
       {...newTabProps(video.url)}
+      onClick={() => trackLatestVideoClick(video)}
       className="group relative block overflow-hidden rounded-2xl border border-ink-line bg-ink-soft/80 backdrop-blur-sm transition duration-200 hover:-translate-y-0.5 hover:border-brand hover:bg-ink-soft hover:shadow-lg hover:shadow-brand/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-bright focus-visible:ring-offset-2 focus-visible:ring-offset-ink"
     >
       <div className="relative aspect-video overflow-hidden border-b border-ink-line bg-ink">

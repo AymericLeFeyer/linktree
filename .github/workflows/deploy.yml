@@ -91,6 +91,10 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          # Inlinées par Vite au build : variables GitHub (vars.*), la clé est publique.
+          build-args: |
+            VITE_AYNALYTICS_URL=${{ vars.VITE_AYNALYTICS_URL }}
+            VITE_AYNALYTICS_SITE_KEY=${{ vars.VITE_AYNALYTICS_SITE_KEY }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

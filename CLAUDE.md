@@ -1,6 +1,6 @@
 # Linktree AyLabs — instructions projet
 
-> Dernière mise à jour : 2026-09-18
+> Dernière mise à jour : 2026-10-22
 
 Page de liens façon linktree pour AyLabs. **React 19 + Vite 8 + TypeScript strict +
 Tailwind 4**, pas de backend ni de backoffice : les liens sont dans `links.json`,
@@ -34,7 +34,8 @@ src/
 ├── infrastructure/video/
 │   ├── api/youtubeStatsClient.ts     # YoutubeStatsClient (fetch)
 │   └── repositories/HttpVideoRepository.ts
-├── vite-env.d.ts                     # virtual:linktree, VITE_YOUTUBE_STATS_URL
+├── shared/analytics/                 # aynalytics.ts (chargement SDK, track), trackEvents.ts (catalogue)
+├── vite-env.d.ts                     # virtual:linktree, VITE_YOUTUBE_STATS_URL, VITE_AYNALYTICS_*
 └── presentation/
     ├── dependencies.ts               # racine de composition (seul lien présentation → infra)
     ├── hooks/useVisibleLinktree.ts, useLatestVideo.ts
@@ -145,6 +146,32 @@ URL surchargeable par `VITE_YOUTUBE_STATS_URL` (au build). Format du fichier :
   aujourd'hui, domaine pas encore choisi).
 - `configureServer` : en dev, modifier `links.json` invalide le module et
   recharge la page.
+
+## Analytics (Aynalytics)
+
+Auto-hébergé (dépôt `../aynalytics`), même intégration qu'aylabs.fr.
+`initAynalytics()` (`src/shared/analytics/aynalytics.ts`, appelé dans `main.tsx`)
+injecte `/_ay/sdk.js` puis `init({ persistence: "local", autoClicks: false,
+outboundLinks: false })` : un `screen` au chargement, visites, visiteurs uniques
+(13 mois), source, géoloc IP, contexte navigateur. **Clics suivis explicitement**
+par un `onClick` qui appelle `src/shared/analytics/trackEvents.ts` (jamais de
+`track("...")` en dur dans un composant) ; chaque `track` vide la file
+aussitôt (keepalive).
+
+| Fonction                | Événement       | Où                | Propriétés                                                                       |
+| ----------------------- | --------------- | ----------------- | -------------------------------------------------------------------------------- |
+| `trackLinkClick`        | `link_click`    | `LinkCard`        | `title`, `url`, `host`, `position` (1 = premier affiché), `featured`             |
+| `trackSocialClick`      | `social_click`  | `SocialLinks`     | `network` (= `platform`), `url` (sans query), `placement: "socials"`             |
+| `trackLatestVideoClick` | `youtube_click` | `LatestVideoCard` | `target: "video"`, `url`, `video_id`, `video_title`, `placement: "latest-video"` |
+
+**Proxy** `location ^~ /_ay/` (`docker/nginx.conf.template`) →
+`http://aynalytics-collector:8080` sur le réseau `pangolin`, résolu à la requête
+(`${NGINX_LOCAL_RESOLVERS}`) : collector arrêté = 502 sur `/_ay/` seulement.
+`X-Forwarded-For` complété pour la géoloc.
+
+Variables GitHub (`vars.*`, pas secrets) passées en build-args :
+`VITE_AYNALYTICS_SITE_KEY` (`ay_pk_...`, absente = inactif, cas du dev) et
+`VITE_AYNALYTICS_URL` (facultative, `/_ay`).
 
 ## Design
 
