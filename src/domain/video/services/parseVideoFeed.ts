@@ -4,9 +4,9 @@ import type { Video } from "../entities/Video";
 const THUMBNAIL_SIZES = ["maxres", "standard", "high", "medium", "default"];
 
 /**
- * Lit `videos` de `youtube-stats.json` (écrit par n8n). Chaque entrée est
- * enveloppée dans `{ json, pairedItem }` ; la forme plate est aussi acceptée
- * pour ne pas dépendre de la version du workflow. Tolérant : une entrée
+ * Lit `videos` de `videos-feed.json` (aylabs.fr, entrées plates construites
+ * depuis les fiches du site) ou de `youtube-stats.json` (n8n, entrées
+ * enveloppées dans `{ json, pairedItem }`) : les deux formes sont acceptées. Tolérant : une entrée
  * illisible est ignorée, jamais d'exception.
  */
 export function parseVideoFeed(raw: unknown): Video[] {

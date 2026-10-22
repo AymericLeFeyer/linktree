@@ -54,6 +54,36 @@ describe("parseVideoFeed", () => {
     expect(video.durationSeconds).toBeNull();
   });
 
+  it("lit une entrée de videos-feed.json (fiches aylabs.fr)", () => {
+    const [video] = parseVideoFeed({
+      videos: [
+        {
+          id: "NyocZZLPKt0",
+          slug: "oakley-meta-test-fonctionnalites-autonomie-ca-vaut-le-coup",
+          title:
+            "Oakley Meta : test, fonctionnalités, autonomie… ça vaut le coup ?",
+          publishedAt: "2026-10-20T18:00:00.000Z",
+          duration: "PT29M11S",
+          thumbnails: {
+            maxres: {
+              url: "https://i.ytimg.com/vi/NyocZZLPKt0/maxresdefault.jpg",
+            },
+            high: { url: "https://i.ytimg.com/vi/NyocZZLPKt0/hqdefault.jpg" },
+          },
+        },
+      ],
+    });
+    expect(video).toEqual({
+      id: "NyocZZLPKt0",
+      title:
+        "Oakley Meta : test, fonctionnalités, autonomie… ça vaut le coup ?",
+      url: "https://www.youtube.com/watch?v=NyocZZLPKt0",
+      thumbnail: "https://i.ytimg.com/vi/NyocZZLPKt0/maxresdefault.jpg",
+      publishedAt: Date.UTC(2026, 9, 20, 18),
+      durationSeconds: 29 * 60 + 11,
+    });
+  });
+
   it("ignore les entrées illisibles sans lever d'erreur", () => {
     const videos = parseVideoFeed({
       videos: [

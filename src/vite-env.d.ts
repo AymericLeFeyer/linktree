@@ -1,8 +1,8 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  /** Source des vidéos ; par défaut `/youtube-stats.json`, relayé vers aylabs.fr. */
-  readonly VITE_YOUTUBE_STATS_URL?: string;
+  /** Source des vidéos ; par défaut `/videos-feed.json`, relayé vers aylabs.fr. */
+  readonly VITE_VIDEOS_FEED_URL?: string;
   /** URL du collector Aynalytics. Facultative : `/_ay` (proxy nginx du site) par défaut. */
   readonly VITE_AYNALYTICS_URL?: string;
   /** Clé publique du site dans Aynalytics (ay_pk_...). Absente = Aynalytics inactif. */

@@ -29,8 +29,9 @@ server {
         expires -1;
     }
 
-    # Dernière vidéo : aylabs.fr ne renvoie pas d'en-tête CORS, on relaie donc
-    # le fichier sur notre origine. L'hôte passe par une variable pour être
+    # Dernière vidéo : flux des fiches vidéo d'aylabs.fr (videos-feed.json).
+    # aylabs.fr ne renvoie pas d'en-tête CORS, on relaie donc le fichier sur
+    # notre origine. L'hôte passe par une variable pour être
     # résolu à la requête et non au démarrage : sans DNS au boot, nginx
     # refuserait de démarrer. NGINX_LOCAL_RESOLVERS vient de /etc/resolv.conf
     # (NGINX_ENTRYPOINT_LOCAL_RESOLVERS dans le Dockerfile) : c'est le DNS
@@ -38,12 +39,14 @@ server {
     # noms de conteneurs.
     # YOUTUBE_STATS_UPSTREAM (Dockerfile, https://aylabs.fr par défaut) : en
     # prod, http://aylabs-site pour joindre le conteneur voisin directement.
+    # Le nom date de l'ancien youtube-stats.json : il reste tel quel car le
+    # compose du serveur le définit.
     # Les directives proxy_ssl_* sont sans effet sur un upstream http://.
-    location = /youtube-stats.json {
+    location = /videos-feed.json {
         resolver ${NGINX_LOCAL_RESOLVERS} valid=300s;
         resolver_timeout 5s;
         set $youtube_stats_upstream ${YOUTUBE_STATS_UPSTREAM};
-        proxy_pass $youtube_stats_upstream/youtube-stats.json;
+        proxy_pass $youtube_stats_upstream/videos-feed.json;
         proxy_ssl_server_name on;
         proxy_ssl_verify on;
         proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;

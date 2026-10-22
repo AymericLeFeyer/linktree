@@ -5,7 +5,7 @@
 Page de liens façon linktree pour AyLabs. **React 19 + Vite 8 + TypeScript strict +
 Tailwind 4**, pas de backend ni de backoffice : les liens sont dans `links.json`,
 lu **au build uniquement**. Seule exception : l'encart « Dernière vidéo », lu à
-l'exécution depuis `https://aylabs.fr/youtube-stats.json` via un relais
+l'exécution depuis `https://aylabs.fr/videos-feed.json` via un relais
 same-origin. Image Docker nginx publiée sur GHCR à chaque push `main`.
 
 ## Structure
@@ -32,10 +32,10 @@ src/
 ├── application/video/usecases/GetLatestVideo.ts
 ├── infrastructure/link/repositories/BuildTimeLinktreeRepository.ts  # importe virtual:linktree
 ├── infrastructure/video/
-│   ├── api/youtubeStatsClient.ts     # YoutubeStatsClient (fetch)
+│   ├── api/videosFeedClient.ts       # VideosFeedClient (fetch)
 │   └── repositories/HttpVideoRepository.ts
 ├── shared/analytics/                 # aynalytics.ts (chargement SDK, track), trackEvents.ts (catalogue)
-├── vite-env.d.ts                     # virtual:linktree, VITE_YOUTUBE_STATS_URL, VITE_AYNALYTICS_*
+├── vite-env.d.ts                     # virtual:linktree, VITE_VIDEOS_FEED_URL, VITE_AYNALYTICS_*
 └── presentation/
     ├── dependencies.ts               # racine de composition (seul lien présentation → infra)
     ├── hooks/useVisibleLinktree.ts, useLatestVideo.ts
@@ -46,7 +46,7 @@ src/
 
 Pas de routeur : une seule page (ordre : `ProfileHeader`, `SocialLinks`,
 `LatestVideoSection`, liste des `LinkCard`). Un seul appel HTTP à l'exécution :
-`GET /youtube-stats.json`.
+`GET /videos-feed.json`.
 
 ## Domaine `link`
 
@@ -102,12 +102,12 @@ Encart « Dernière vidéo » entre les réseaux et les liens.
 ### Repository
 
 `VideoRepository.listRecent(): Promise<Video[]>` — ordre quelconque. Seule
-implémentation : `HttpVideoRepository(client: YoutubeStatsClient)`.
+implémentation : `HttpVideoRepository(client: VideosFeedClient)`.
 
 ### Services
 
-- `parseVideoFeed(raw): Video[]` — lit `raw.videos`, déballe les entrées n8n
-  `{ json, pairedItem }` (accepte aussi la forme plate), **tolérant** : une entrée
+- `parseVideoFeed(raw): Video[]` — lit `raw.videos`, entrées plates
+  (`videos-feed.json`) ou enveloppées n8n `{ json, pairedItem }` (`youtube-stats.json`), **tolérant** : une entrée
   sans `id`/`title`/`publishedAt` valide est ignorée, jamais d'exception.
 - `parseIsoDuration("PT18M54S") → 1134` (`P1DT2H` géré, `PT`/`P` → `null`).
 - `latestVideo(videos, now): Video | null` — plus récente, **Shorts exclus**
@@ -127,13 +127,17 @@ du repository remonte telle quelle.
 
 ### Endpoint
 
-| Méthode | URL                   | Servi par                                                                                                                                                                                                                                               |
-| ------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET`   | `/youtube-stats.json` | relais vers `https://aylabs.fr/youtube-stats.json` : `server.proxy`/`preview.proxy` (Vite) ; `location =` (nginx) vers `${YOUTUBE_STATS_UPSTREAM}` — `https://aylabs.fr` par défaut, `http://aylabs-site` en prod (conteneur voisin, réseau `pangolin`) |
+| Méthode | URL                 | Servi par                                                                                                                                                                                                                                             |
+| ------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET`   | `/videos-feed.json` | relais vers `https://aylabs.fr/videos-feed.json` : `server.proxy`/`preview.proxy` (Vite) ; `location =` (nginx) vers `${YOUTUBE_STATS_UPSTREAM}` — `https://aylabs.fr` par défaut, `http://aylabs-site` en prod (conteneur voisin, réseau `pangolin`) |
 
-URL surchargeable par `VITE_YOUTUBE_STATS_URL` (au build). Format du fichier :
-`{ stats, videos: [{ json: { id, title, publishedAt, duration, thumbnails: { <taille>: { url } } } }] }`,
-15 vidéos récentes, écrit par n8n dans le dépôt `../aylabs`.
+URL surchargeable par `VITE_VIDEOS_FEED_URL` (au build). Format :
+`{ videos: [{ id, slug, title, publishedAt (ISO UTC), duration (PT29M11S), thumbnails: { maxres, high: { url } } }] }`,
+généré **au build d'aylabs** depuis ses fiches `src/content/videos` (`vite/videosFeedPlugin.ts`).
+Pourquoi pas `youtube-stats.json` (API YouTube via n8n, utilisé jusqu'au 2026-10-22) :
+il ne voit pas les vidéos non répertoriées, et la « dernière vidéo » affichée était
+fausse (la vidéo longue manquait, seul son Short de 57 s y figurait). Les fiches
+programmées ont une date future : `latestVideo` les ignore jusqu'à leur sortie.
 
 ## Plugin Vite (`vite/linktreePlugin.ts`)
 
@@ -209,12 +213,12 @@ cassée (`onError`) → monogramme de l'initiale.
 
 ## Déploiement
 
-| Fichier                        | Rôle                                                                                                                                                          |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `.github/workflows/deploy.yml` | job `check` (lint, format, tests, build) sur push/PR ; job `docker-image` sur push `main` et manuel → `ghcr.io/<owner>/linktree` (`latest`, `sha-…`, date)    |
-| `Dockerfile`                   | `node:24-alpine` build → `nginx:stable-alpine` port 80, `HEALTHCHECK` wget                                                                                    |
-| `docker/nginx.conf.template`   | fallback `index.html`, cache 1 an sur `/assets/`, `index.html` jamais en cache, en-têtes de sécurité, relais `/youtube-stats.json` → `YOUTUBE_STATS_UPSTREAM` |
-| `docker-compose.yml`           | service `linktree`, port `${LINKTREE_PORT:-8082}:80` (8080/8081 = stack aylabs)                                                                               |
+| Fichier                        | Rôle                                                                                                                                                        |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.github/workflows/deploy.yml` | job `check` (lint, format, tests, build) sur push/PR ; job `docker-image` sur push `main` et manuel → `ghcr.io/<owner>/linktree` (`latest`, `sha-…`, date)  |
+| `Dockerfile`                   | `node:24-alpine` build → `nginx:stable-alpine` port 80, `HEALTHCHECK` wget                                                                                  |
+| `docker/nginx.conf.template`   | fallback `index.html`, cache 1 an sur `/assets/`, `index.html` jamais en cache, en-têtes de sécurité, relais `/videos-feed.json` → `YOUTUBE_STATS_UPSTREAM` |
+| `docker-compose.yml`           | service `linktree`, port `${LINKTREE_PORT:-8082}:80` (8080/8081 = stack aylabs)                                                                             |
 
 ## Commandes
 
@@ -253,9 +257,12 @@ cassée (`onError`) → monogramme de l'initiale.
   échouer `format:check` en CI (2026-09-18) alors que le JSON était valide. Sa
   validité est contrôlée par le build, pas par Prettier. Ne pas le réintégrer.
 - **aylabs.fr n'envoie pas d'en-tête CORS** : ne jamais `fetch`
-  `https://aylabs.fr/youtube-stats.json` depuis le navigateur, passer par
-  `/youtube-stats.json` (relais). Le fichier distant n'est lui-même mis à jour
-  qu'à la reconstruction de l'image aylabs (n8n commite dans `../aylabs`).
+  `https://aylabs.fr/videos-feed.json` depuis le navigateur, passer par
+  `/videos-feed.json` (relais). Le fichier distant n'est mis à jour qu'à la
+  reconstruction de l'image aylabs (ajout d'une fiche vidéo).
+- **`YOUTUBE_STATS_UPSTREAM` garde son ancien nom** alors qu'il sert
+  `videos-feed.json` : le compose Dockhand du serveur le définit
+  (`http://aylabs-site`). Le renommer casserait le relais en prod.
 - **nginx est un gabarit** (`/etc/nginx/templates/`, `envsubst` au démarrage) :
   `NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1` (Dockerfile) fournit
   `${NGINX_LOCAL_RESOLVERS}` depuis `/etc/resolv.conf`. `proxy_pass` passe par

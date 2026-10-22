@@ -28,7 +28,7 @@ RUN npm run build
 FROM nginx:stable-alpine
 
 # Gabarit traité au démarrage : fournit le résolveur DNS du relais
-# /youtube-stats.json (voir docker/nginx.conf.template).
+# /videos-feed.json (voir docker/nginx.conf.template).
 ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
 # Origine du relais, sans slash final. Surchargée en prod par le compose
 # (http://aylabs-site, conteneur voisin sur le réseau pangolin). Doit rester

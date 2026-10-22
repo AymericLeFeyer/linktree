@@ -7,7 +7,7 @@ import { linktreePlugin } from "./vite/linktreePlugin.ts";
 // aylabs.fr ne renvoie pas d'en-tête CORS : le navigateur lit le fichier sur
 // notre propre origine. Même relais que docker/nginx.conf.template en prod.
 const youtubeStatsProxy: Record<string, ProxyOptions> = {
-  "/youtube-stats.json": { target: "https://aylabs.fr", changeOrigin: true },
+  "/videos-feed.json": { target: "https://aylabs.fr", changeOrigin: true },
 };
 
 export default defineConfig({
