@@ -11,7 +11,11 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
-    "check": "npm run lint && npm run format:check && npm run test && npm run build"
+    "check": "npm run lint && npm run format:check && npm run test && npm run build && npm run build:admin",
+    "dev:admin": "vite --config vite.admin.config.ts",
+    "dev:admin-api": "node --env-file-if-exists=.env admin/server/main.ts",
+    "build:admin": "vite build --config vite.admin.config.ts",
+    "start:admin": "node admin/server/main.ts"
   },
   "dependencies": {
     "lucide-react": "^1.47.0",

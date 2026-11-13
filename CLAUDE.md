@@ -1,6 +1,6 @@
 # Linktree AyLabs — instructions projet
 
-> Dernière mise à jour : 2026-10-22
+> Dernière mise à jour : 2026-11-13
 
 Page de liens façon linktree pour AyLabs. **React 19 + Vite 8 + TypeScript strict +
 Tailwind 4**, pas de backend ni de backoffice : les liens sont dans `links.json`,
@@ -47,6 +47,52 @@ src/
 Pas de routeur : une seule page (ordre : `ProfileHeader`, `SocialLinks`,
 `LatestVideoSection`, liste des `LinkCard`). Un seul appel HTTP à l'exécution :
 `GET /videos-feed.json`.
+
+## Interface d'admin (`admin/`)
+
+Second déploiement du même dépôt : édite `links.json` **sur GitHub** (le dépôt
+reste l'unique source de vérité, le site ne lit toujours que ce fichier au build).
+Image `ghcr.io/<owner>/linktree-admin` (`Dockerfile.admin`), stack Dockhand
+**séparée** `linktree-admin` (`docker-compose.admin.yml`, port 8083) : elle
+redéploie la stack `linktree` et ne doit pas se recréer elle-même.
+
+```
+admin/server/   # Node 24 SANS dépendance npm, TypeScript exécuté tel quel (type stripping)
+├── main.ts / config.ts   # variables d'environnement
+├── app.ts                # routes + fichiers statiques + auth Basic
+├── github.ts             # API Contents (lire/commiter) + runs du workflow
+├── publisher.ts          # suit commit → pipeline GitHub → déploiement Dockhand
+└── dockhand.ts           # POST /api/stacks/<stack>/deploy
+admin/ui/       # React + Tailwind (vite.admin.config.ts → dist-admin/)
+```
+
+Flux d'un enregistrement : l'UI valide avec `parseLinktree` (même parseur que le
+build) → `PUT /api/links { data, sha }` → le serveur **revalide** (et vérifie via
+l'API GitHub que les images locales `/x` existent dans `public/`) → commit direct
+sur `main` (`content: links (admin)`) → `Publisher` interroge le run de
+`release.yml` pour ce commit, puis, s'il est vert, redéploie la stack `linktree`
+(`pull` + `forceRecreate`). `sha` = sha du blob lu : modification concurrente
+(édition à la main sur GitHub) → 409, l'utilisateur recharge. Les liens
+n'apparaissent en ligne qu'après pipeline + déploiement (quelques minutes).
+
+Variables : `GITHUB_TOKEN` (obligatoire, fine-grained : Contents RW + Actions R sur
+ce dépôt), `ADMIN_PASSWORD` (HTTP Basic, identifiant libre ; absent = interface
+ouverte), `DOCKHAND_URL` (absent = on s'arrête à l'image publiée), `DOCKHAND_STACK`
+(`linktree`), `DOCKHAND_ENV` (`1`), `GITHUB_REPO`, `GITHUB_BRANCH`,
+`GITHUB_WORKFLOW`, `PORT`. Dev : `npm run dev:admin-api` (lit `.env`) +
+`npm run dev:admin` (Vite sur 5174, proxy `/api`).
+
+Points d'attention :
+
+- Le fichier est réécrit par `JSON.stringify(…, null, 2)` : la mise en forme
+  manuelle (objets sur une ligne) est perdue au premier enregistrement ; les
+  champs vides sont retirés. `$schema` et `siteUrl` sont conservés.
+- Le serveur n'importe que `src/domain/link/**` (DOM-free) : ne pas y mettre
+  d'API navigateur, l'image admin ne copie que `src/domain`.
+- Pas d'upload d'image : utiliser des URL https, ou ajouter le fichier dans
+  `public/links/` par un commit classique.
+- Le suivi de déploiement est en mémoire : un redémarrage de l'admin pendant la
+  pipeline perd le suivi (le site, lui, sera simplement à redéployer à la main).
 
 ## Domaine `link`
 
@@ -213,18 +259,18 @@ cassée (`onError`) → monogramme de l'initiale.
 
 ## Déploiement
 
-| Fichier                        | Rôle                                                                                                                                                        |
-| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `.github/workflows/deploy.yml` | job `check` (lint, format, tests, build) sur push/PR ; job `docker-image` sur push `main` et manuel → `ghcr.io/<owner>/linktree` (`latest`, `sha-…`, date)  |
-| `Dockerfile`                   | `node:24-alpine` build → `nginx:stable-alpine` port 80, `HEALTHCHECK` wget                                                                                  |
-| `docker/nginx.conf.template`   | fallback `index.html`, cache 1 an sur `/assets/`, `index.html` jamais en cache, en-têtes de sécurité, relais `/videos-feed.json` → `YOUTUBE_STATS_UPSTREAM` |
-| `docker-compose.yml`           | service `linktree`, port `${LINKTREE_PORT:-8082}:80` (8080/8081 = stack aylabs)                                                                             |
+| Fichier                         | Rôle                                                                                                                                                                                                    |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.github/workflows/release.yml` | job `check` (lint, format, tests, build) sur push/PR ; job `docker-image` (matrice site + admin) sur push `main` et manuel → `ghcr.io/<owner>/linktree` et `…/linktree-admin` (`latest`, `sha-…`, date) |
+| `Dockerfile`                    | `node:24-alpine` build → `nginx:stable-alpine` port 80, `HEALTHCHECK` wget                                                                                                                              |
+| `docker/nginx.conf.template`    | fallback `index.html`, cache 1 an sur `/assets/`, `index.html` jamais en cache, en-têtes de sécurité, relais `/videos-feed.json` → `YOUTUBE_STATS_UPSTREAM`                                             |
+| `docker-compose.yml`            | service `linktree`, port `${LINKTREE_PORT:-8082}:80` (8080/8081 = stack aylabs)                                                                                                                         |
 
 ## Commandes
 
 `npm run dev` · `npm run build` (`tsc -b && vite build`) · `npm test` (vitest,
-45 tests) · `npm run lint` · `npm run format` / `format:check` · `npm run check`
-(tout, comme la CI).
+63 tests) · `npm run lint` · `npm run format` / `format:check` · `npm run check`
+(tout, comme la CI) · `npm run dev:admin` / `build:admin` / `start:admin` (admin).
 
 ## Points d'attention
 

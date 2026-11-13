@@ -49,6 +49,14 @@ image n'est publiée tant que ce n'est pas corrigé.
 Dans VS Code, `links.schema.json` fournit l'autocomplétion et signale les
 erreurs pendant la saisie.
 
+## Interface d'admin
+
+Plutôt que d'éditer `links.json` à la main : une interface web (`admin/`) liste
+et modifie le profil, les réseaux et les liens (ajout, ordre, date de fin…),
+commit sur `main`, attend la pipeline puis redéploie la stack Dockhand.
+Déploiement : `docker-compose.admin.yml` (stack `linktree-admin`), avec
+`GITHUB_TOKEN`, `ADMIN_PASSWORD` et `DOCKHAND_URL`. Détails dans `CLAUDE.md`.
+
 ## Développement
 
 ```bash

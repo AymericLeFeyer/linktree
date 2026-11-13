@@ -15,6 +15,6 @@ export default defineConfig({
   server: { proxy: youtubeStatsProxy },
   preview: { proxy: youtubeStatsProxy },
   test: {
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "admin/**/*.test.ts"],
   },
 });

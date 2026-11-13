@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+/* Mêmes jetons que le linktree (src/index.css). */
+@theme {
+  --font-sans: Figtree, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Bricolage Grotesque", Figtree, system-ui, sans-serif;
+
+  --color-brand: #398fba;
+  --color-brand-bright: #5fb6de;
+  --color-brand-deep: #2a6d94;
+
+  --color-ink: #0c1319;
+  --color-ink-soft: #141f27;
+  --color-ink-line: #22323d;
+}
+
+@layer base {
+  html {
+    background-color: var(--color-ink);
+  }
+
+  body {
+    @apply bg-ink font-sans text-white antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display tracking-tight;
+  }
+}

@@ -1,0 +1,38 @@
+# Image de l'interface d'admin du linktree : serveur Node (API GitHub + Dockhand)
+# qui sert aussi l'interface React compilée.
+#   docker build -f Dockerfile.admin -t aylabs-linktree-admin .
+#
+# Node 24 exécute le TypeScript du serveur directement (type stripping) : seul
+# le front est compilé.
+
+FROM node:24-alpine AS build
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY tsconfig*.json vite.admin.config.ts ./
+COPY admin ./admin
+# Le front importe le parseur de links.json : même validation que le build du site.
+COPY src/domain ./src/domain
+
+RUN npm run build:admin
+
+
+FROM node:24-alpine
+ENV NODE_ENV=production
+WORKDIR /app
+
+# Le serveur n'a aucune dépendance npm : pas d'installation.
+COPY package.json ./
+COPY admin/server ./admin/server
+COPY src/domain ./src/domain
+COPY --from=build /app/dist-admin ./dist-admin
+
+USER node
+EXPOSE 8083
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget -q --spider http://127.0.0.1:8083/ || exit 1
+
+CMD ["node", "admin/server/main.ts"]

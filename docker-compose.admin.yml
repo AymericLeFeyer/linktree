@@ -1,0 +1,26 @@
+# Interface d'admin du linktree — image publiée sur GHCR par la même pipeline.
+# À déployer comme stack Dockhand séparée (« linktree-admin ») : l'admin
+# redéploie la stack « linktree » et ne doit pas se recréer lui-même.
+#
+# Variables (onglet Environnement de la stack) :
+#   GITHUB_TOKEN    jeton fine-grained sur le dépôt linktree : Contents (lecture
+#                   et écriture) + Actions (lecture). Obligatoire.
+#   ADMIN_PASSWORD  mot de passe de l'interface (identifiant libre). Fortement conseillé.
+#   DOCKHAND_URL    ex. http://192.168.68.87:3000 ; vide = pas de redéploiement auto.
+
+services:
+  linktree-admin:
+    image: ghcr.io/aymericlefeyer/linktree-admin:latest
+    container_name: aylabs-linktree-admin
+    restart: unless-stopped
+    pull_policy: always
+    ports:
+      - "${LINKTREE_ADMIN_PORT:-8083}:8083"
+    environment:
+      GITHUB_TOKEN: ${GITHUB_TOKEN:?jeton GitHub obligatoire}
+      GITHUB_REPO: ${GITHUB_REPO:-AymericLeFeyer/linktree}
+      GITHUB_BRANCH: ${GITHUB_BRANCH:-main}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      DOCKHAND_URL: ${DOCKHAND_URL:-}
+      DOCKHAND_STACK: ${DOCKHAND_STACK:-linktree}
+      DOCKHAND_ENV: ${DOCKHAND_ENV:-1}
