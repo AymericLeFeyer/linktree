@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { parseExpiry } from "../../src/domain/link/services/expiry.ts";
 import { Button, Card, Field, TextInput } from "./fields.tsx";
+import { ImageField } from "./ImageField.tsx";
 import {
   SOCIAL_PLATFORMS,
   move,
@@ -18,7 +19,13 @@ export function ProfileEditor({ data, onChange }: EditorProps) {
   const set = (patch: Partial<RawLinktree["profile"]>) =>
     onChange({ ...data, profile: { ...data.profile, ...patch } });
   return (
-    <Card title="Profil">
+    <Card
+      title="Profil"
+      collapsible
+      summary={[data.profile.name, data.profile.tagline]
+        .filter(Boolean)
+        .join(" · ")}
+    >
       <div className="grid gap-4 sm:grid-cols-2">
         <TextInput
           label="Nom"
@@ -38,9 +45,9 @@ export function ProfileEditor({ data, onChange }: EditorProps) {
           />
         </div>
         <div className="sm:col-span-2">
-          <TextInput
+          <ImageField
             label="Avatar"
-            hint="Chemin de public/ (/aylabs.jpg) ou URL https."
+            hint="Photo carrée : URL https, chemin de public/ ou fichier à téléverser."
             value={data.profile.avatar}
             onChange={(avatar) => set({ avatar })}
           />
@@ -57,6 +64,8 @@ export function SocialsEditor({ data, onChange }: EditorProps) {
   return (
     <Card
       title="Réseaux"
+      collapsible
+      summary={`${data.socials.length} réseau${data.socials.length > 1 ? "x" : ""}`}
       action={
         <Button
           onClick={() =>
@@ -105,7 +114,7 @@ export function SocialsEditor({ data, onChange }: EditorProps) {
           </li>
         ))}
         {data.socials.length === 0 && (
-          <li className="text-sm text-white/40">Aucun réseau.</li>
+          <li className="text-fg/40 text-sm">Aucun réseau.</li>
         )}
       </ul>
     </Card>
@@ -152,9 +161,9 @@ export function LinksEditor({ data, onChange }: EditorProps) {
                   onChange={(description) => update(index, { description })}
                 />
               </div>
-              <TextInput
+              <ImageField
                 label="Image"
-                hint="URL https ou chemin de public/ (/links/x.webp)."
+                hint="URL https, chemin de public/ ou fichier à téléverser."
                 value={link.image}
                 onChange={(image) => update(index, { image })}
               />
@@ -167,7 +176,7 @@ export function LinksEditor({ data, onChange }: EditorProps) {
               />
             </div>
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-              <label className="flex items-center gap-2 text-sm text-white/70">
+              <label className="text-fg/70 flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
                   className="accent-brand"
@@ -241,11 +250,11 @@ function ExpiryHint({ value }: { value: string | null | undefined }) {
   if (!value?.trim()) return <>Vide = le lien reste affiché.</>;
   const instant = parseExpiry(value);
   if (instant === null) {
-    return <span className="text-red-300">Date illisible.</span>;
+    return <span className="text-danger">Date illisible.</span>;
   }
   const label = `disparaît le ${PARIS_DATE.format(instant)} (Paris)`;
   return instant <= now ? (
-    <span className="text-amber-300">Déjà expiré : {label}</span>
+    <span className="text-warn">Déjà expiré : {label}</span>
   ) : (
     <>{label[0].toUpperCase() + label.slice(1)}</>
   );

@@ -57,7 +57,7 @@ export function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
   return (
     <section className="rounded-2xl border border-ink-line bg-ink-soft p-6">
       <h2 className="text-lg font-semibold">Connexion</h2>
-      <p className="mt-1 text-sm text-white/60">
+      <p className="text-fg/60 mt-1 text-sm">
         Seuls les comptes GitHub avec accès en écriture au dépôt peuvent
         modifier les liens.
       </p>
@@ -79,12 +79,12 @@ export function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
           <p className="font-mono text-3xl font-bold tracking-widest text-brand-bright">
             {phase.flow.userCode}
           </p>
-          <p className="text-white/40">En attente de la validation…</p>
+          <p className="text-fg/40">En attente de la validation…</p>
         </div>
       ) : (
         <div className="mt-5">
           {phase.step === "failed" && (
-            <p className="mb-3 text-sm text-red-300">{phase.message}</p>
+            <p className="text-danger mb-3 text-sm">{phase.message}</p>
           )}
           <Button variant="primary" onClick={() => void start()}>
             Se connecter avec GitHub

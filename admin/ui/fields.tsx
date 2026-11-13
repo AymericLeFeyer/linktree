@@ -1,7 +1,7 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 const INPUT =
-  "w-full rounded-lg border border-ink-line bg-ink px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-brand-bright focus:outline-none";
+  "w-full rounded-lg border border-ink-line bg-ink px-3 py-2 text-sm text-fg placeholder:text-fg/30 focus:border-brand-bright focus:outline-none";
 
 export function Field({
   label,
@@ -14,11 +14,9 @@ export function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-xs font-medium text-white/60">
-        {label}
-      </span>
+      <span className="text-fg/60 mb-1 block text-xs font-medium">{label}</span>
       {children}
-      {hint && <span className="mt-1 block text-xs text-white/40">{hint}</span>}
+      {hint && <span className="text-fg/40 mt-1 block text-xs">{hint}</span>}
     </label>
   );
 }
@@ -50,20 +48,49 @@ export function TextInput({
 
 export function Card({
   title,
+  summary,
   action,
+  collapsible = false,
   children,
 }: {
   title: string;
+  /** Résumé affiché à côté du titre quand la section est repliée. */
+  summary?: ReactNode;
   action?: ReactNode;
+  /** Section repliable, repliée au départ. */
+  collapsible?: boolean;
   children: ReactNode;
 }) {
+  const [open, setOpen] = useState(!collapsible);
   return (
     <section className="rounded-2xl border border-ink-line bg-ink-soft p-5">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">{title}</h2>
-        {action}
+      <div
+        className={`flex items-center justify-between gap-3 ${open ? "mb-4" : ""}`}
+      >
+        {collapsible ? (
+          <button
+            type="button"
+            aria-expanded={open}
+            onClick={() => setOpen(!open)}
+            className="flex min-w-0 flex-1 items-center gap-2 text-left"
+          >
+            <span
+              aria-hidden
+              className={`text-fg/50 transition-transform ${open ? "rotate-90" : ""}`}
+            >
+              ▸
+            </span>
+            <h2 className="text-lg font-semibold">{title}</h2>
+            {!open && summary && (
+              <span className="text-fg/50 truncate text-sm">{summary}</span>
+            )}
+          </button>
+        ) : (
+          <h2 className="text-lg font-semibold">{title}</h2>
+        )}
+        {(open || !collapsible) && action}
       </div>
-      {children}
+      {open && children}
     </section>
   );
 }
@@ -77,9 +104,8 @@ export function Button({
   const styles = {
     primary: "bg-brand text-white hover:bg-brand-deep disabled:opacity-40",
     ghost:
-      "border border-ink-line text-white/80 hover:border-brand hover:text-white disabled:opacity-30",
-    danger:
-      "border border-ink-line text-red-300 hover:border-red-400 hover:text-red-200",
+      "border border-ink-line text-fg/80 hover:border-brand hover:text-fg disabled:opacity-30",
+    danger: "border border-ink-line text-danger hover:border-danger",
   }[variant];
   return (
     <button

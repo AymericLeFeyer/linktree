@@ -99,8 +99,21 @@ Points d'attention :
   champs vides sont retirés. `$schema` et `siteUrl` sont conservés.
 - Le serveur n'importe que `src/domain/link/**` (DOM-free) : ne pas y mettre
   d'API navigateur, l'image admin ne copie que `src/domain`.
-- Pas d'upload d'image : utiliser des URL https, ou ajouter le fichier dans
-  `public/links/` par un commit classique.
+- **Upload d'image** (`POST /api/upload`, champs image et avatar) : le navigateur
+  réduit à 1280 px et convertit en WebP (`admin/ui/image.ts`; GIF et SVG envoyés
+  tels quels), le serveur commite dans `public/links/` sous un nom nettoyé, sans
+  jamais écraser (`-2`, `-3`…) et renvoie `/links/x.webp`. C'est un commit
+  **séparé** de celui de `links.json` (un run de pipeline de plus, annulé par le
+  suivant grâce à la concurrence du workflow). Une image téléversée mais jamais
+  référencée reste dans le dépôt.
+- **Thème** : clair/sombre via `data-theme` sur `<html>` (script inline dans
+  `index.html` contre le flash, puis `theme.ts`). Défaut « système »
+  (`prefers-color-scheme`, suivi en direct), bouton de bascule système → clair →
+  sombre, choix en `localStorage`. Les couleurs passent par les jetons
+  sémantiques de `index.css` (`fg`, `ink*`, `danger`, `warn`, `ok`) : ne pas
+  réintroduire `text-white` ni de palette Tailwind en dur.
+- Profil et Réseaux sont repliables (`Card collapsible`, repliés au départ,
+  résumé affiché dans l'en-tête).
 - Le suivi de déploiement est en mémoire : un redémarrage de l'admin pendant la
   pipeline perd le suivi (le site, lui, sera simplement à redéployer à la main).
 
@@ -279,7 +292,7 @@ cassée (`onError`) → monogramme de l'initiale.
 ## Commandes
 
 `npm run dev` · `npm run build` (`tsc -b && vite build`) · `npm test` (vitest,
-63 tests) · `npm run lint` · `npm run format` / `format:check` · `npm run check`
+73 tests) · `npm run lint` · `npm run format` / `format:check` · `npm run check`
 (tout, comme la CI) · `npm run dev:admin` / `build:admin` / `start:admin` (admin).
 
 ## Points d'attention

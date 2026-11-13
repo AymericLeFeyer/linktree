@@ -20,6 +20,7 @@ async function start(overrides: Partial<AppDeps> = {}) {
       sha: "blob1",
     })),
     putFile: vi.fn(async () => ({ commit: "commit2", sha: "blob2" })),
+    createFile: vi.fn(async () => ({ commit: "img1" })),
     fileExists: vi.fn(async () => true),
     workflowRun: vi.fn(async () => null),
   };
@@ -157,5 +158,47 @@ describe("admin app", () => {
     const { base, github } = await start();
     github.putFile.mockRejectedValue(new GitHubConflictError());
     expect((await put(base, { data: VALID, sha: "old" })).status).toBe(409);
+  });
+
+  const upload = (base: string, name: string, data = "aGVsbG8=") =>
+    fetch(`${base}/api/upload`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...logged },
+      body: JSON.stringify({ name, data }),
+    });
+
+  it("téléverse une image dans public/links avec un nom nettoyé", async () => {
+    const { base, github } = await start();
+    github.fileExists.mockResolvedValue(false);
+    const res = await upload(base, "Ma Photo é!.WEBP");
+    expect(await res.json()).toEqual({ path: "/links/ma-photo-e.webp" });
+    expect(github.createFile).toHaveBeenCalledWith(
+      "public/links/ma-photo-e.webp",
+      "aGVsbG8=",
+      expect.stringContaining("aymeric"),
+    );
+  });
+
+  it("ne remplace jamais une image existante", async () => {
+    const { base, github } = await start();
+    github.fileExists.mockResolvedValueOnce(true).mockResolvedValue(false);
+    const res = await upload(base, "logo.png");
+    expect(await res.json()).toEqual({ path: "/links/logo-2.png" });
+  });
+
+  it("refuse un format non image", async () => {
+    const { base, github } = await start();
+    expect((await upload(base, "evil.html")).status).toBe(422);
+    expect((await upload(base, "noext")).status).toBe(422);
+    expect(github.createFile).not.toHaveBeenCalled();
+  });
+
+  it("exige une session pour téléverser", async () => {
+    const { base } = await start();
+    const res = await fetch(`${base}/api/upload`, {
+      method: "POST",
+      body: JSON.stringify({ name: "a.png", data: "aGk=" }),
+    });
+    expect(res.status).toBe(401);
   });
 });

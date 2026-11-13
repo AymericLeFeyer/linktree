@@ -12,11 +12,16 @@ import type { Publisher } from "./publisher.ts";
 
 export const LINKS_FILE = "links.json";
 const MAX_BODY_BYTES = 1_000_000;
+/** Corps d'un upload : l'image en base64 (+33 %). */
+const MAX_UPLOAD_BODY_BYTES = 7_000_000;
+const MAX_IMAGE_BYTES = 5_000_000;
+const IMAGE_DIR = "links";
+const IMAGE_TYPES = ["png", "jpg", "jpeg", "webp", "gif", "avif", "svg"];
 const MAX_LOCAL_ASSETS = 60;
 
 type Repo = Pick<
   GitHubClient,
-  "getFile" | "putFile" | "fileExists" | "workflowRun"
+  "getFile" | "putFile" | "createFile" | "fileExists" | "workflowRun"
 >;
 
 export interface AppDeps {
@@ -91,6 +96,8 @@ export function createApp(deps: AppDeps) {
               sha: file.sha,
             });
           }
+          case "POST /api/upload":
+            return await uploadImage(req, res, github, session.login);
           case "PUT /api/links":
             return await saveLinks(req, res, deps, github, session.login);
           case "GET /api/publish":
@@ -141,6 +148,59 @@ async function saveLinks(
     github.workflowRun(deps.workflowFile, commit),
   );
   return sendJson(res, 200, { sha: saved.sha, commit: saved.commit });
+}
+
+/**
+ * Enregistre une image dans `public/links/` (commit dédié) et renvoie le chemin
+ * à mettre dans le champ image. Ne remplace jamais un fichier existant.
+ */
+async function uploadImage(
+  req: IncomingMessage,
+  res: ServerResponse,
+  github: Repo,
+  login: string,
+): Promise<void> {
+  const body = JSON.parse(await readBody(req, MAX_UPLOAD_BODY_BYTES)) as {
+    name?: unknown;
+    data?: unknown;
+  };
+  if (typeof body.name !== "string" || typeof body.data !== "string") {
+    return sendJson(res, 400, { error: "Corps attendu : { name, data }." });
+  }
+  const dot = body.name.lastIndexOf(".");
+  const ext = dot > 0 ? body.name.slice(dot + 1).toLowerCase() : "";
+  if (!IMAGE_TYPES.includes(ext)) {
+    return sendJson(res, 422, {
+      errors: [`Format d'image refusé (acceptés : ${IMAGE_TYPES.join(", ")}).`],
+    });
+  }
+  const size = Buffer.from(body.data, "base64").length;
+  if (size === 0 || size > MAX_IMAGE_BYTES) {
+    return sendJson(res, 422, {
+      errors: ["Image vide ou supérieure à 5 Mo."],
+    });
+  }
+  const stem =
+    body.name
+      .slice(0, dot)
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60) || "image";
+
+  for (let attempt = 1; attempt <= 20; attempt++) {
+    const file = `${stem}${attempt > 1 ? `-${attempt}` : ""}.${ext}`;
+    if (await github.fileExists(`public/${IMAGE_DIR}/${file}`)) continue;
+    await github.createFile(
+      `public/${IMAGE_DIR}/${file}`,
+      body.data,
+      `content: image ${file} (admin, ${login})`,
+    );
+    return sendJson(res, 200, { path: `/${IMAGE_DIR}/${file}` });
+  }
+  return sendJson(res, 409, { error: "Trop de fichiers portent ce nom." });
 }
 
 /** Chemins locaux (`/links/x.webp`) cités par le JSON qui existent dans `public/` du dépôt. */
@@ -237,12 +297,15 @@ function handleError(res: ServerResponse, error: unknown): void {
 
 class PayloadTooLarge extends Error {}
 
-async function readBody(req: IncomingMessage): Promise<string> {
+async function readBody(
+  req: IncomingMessage,
+  limit = MAX_BODY_BYTES,
+): Promise<string> {
   const chunks: Buffer[] = [];
   let size = 0;
   for await (const chunk of req as AsyncIterable<Buffer>) {
     size += chunk.length;
-    if (size > MAX_BODY_BYTES) throw new PayloadTooLarge();
+    if (size > limit) throw new PayloadTooLarge();
     chunks.push(chunk);
   }
   return Buffer.concat(chunks).toString("utf8");

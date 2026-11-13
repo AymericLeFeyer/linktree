@@ -64,6 +64,8 @@ export const api = {
   startLogin: () => post<DeviceFlow>("/api/auth/device"),
   pollLogin: (flowId: string) => post<PollResult>("/api/auth/poll", { flowId }),
   logout: () => post("/api/auth/logout"),
+  upload: (name: string, data: string) =>
+    post<{ path: string }>("/api/upload", { name, data }),
   load: () => request<{ data: RawLinktree; sha: string }>("/api/links"),
   save: (data: RawLinktree, sha: string) =>
     request<{ sha: string; commit: string }>("/api/links", {

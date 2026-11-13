@@ -5,6 +5,7 @@ import { LinksEditor, ProfileEditor, SocialsEditor } from "./Editors.tsx";
 import { Button } from "./fields.tsx";
 import { Login } from "./Login.tsx";
 import { cleanForSave, type RawLinktree } from "./model.ts";
+import { applyPref, nextPref, readPref, type ThemePref } from "./theme.ts";
 
 interface Loaded {
   data: RawLinktree;
@@ -108,7 +109,7 @@ export function App() {
   if (loadError) {
     return (
       <Shell>
-        <p className="rounded-xl border border-red-400/40 bg-red-950/30 p-4 text-sm text-red-200">
+        <p className="border-danger/40 bg-danger/10 text-danger rounded-xl border p-4 text-sm">
           Impossible de charger links.json : {loadError}
         </p>
         <Button className="mt-4" onClick={() => void load()}>
@@ -120,7 +121,7 @@ export function App() {
   if (!draft || !info) {
     return (
       <Shell>
-        <p className="text-sm text-white/50">Chargement…</p>
+        <p className="text-fg/50 text-sm">Chargement…</p>
       </Shell>
     );
   }
@@ -148,14 +149,14 @@ export function App() {
       <div className="fixed inset-x-0 bottom-0 border-t border-ink-line bg-ink/95 backdrop-blur">
         <div className="mx-auto max-w-3xl px-4 py-3">
           {shown.length > 0 && (
-            <ul className="mb-3 max-h-32 list-disc space-y-0.5 overflow-auto pl-5 text-xs text-red-300">
+            <ul className="text-danger mb-3 max-h-32 list-disc space-y-0.5 overflow-auto pl-5 text-xs">
               {shown.map((message) => (
                 <li key={message}>{message}</li>
               ))}
             </ul>
           )}
           <div className="flex items-center justify-between gap-3">
-            <span className="text-sm text-white/50">
+            <span className="text-fg/50 text-sm">
               {dirty ? "Modifications non enregistrées" : "Tout est enregistré"}
             </span>
             <div className="flex gap-2">
@@ -198,17 +199,20 @@ function Shell({
           <h1 className="text-2xl font-bold">
             Linktree <span className="text-brand-bright">admin</span>
           </h1>
-          {login && onLogout && (
-            <div className="flex items-center gap-3 text-sm text-white/60">
-              {login}
-              <Button onClick={onLogout}>Déconnexion</Button>
-            </div>
-          )}
+          <div className="text-fg/60 flex items-center gap-3 text-sm">
+            <ThemeToggle />
+            {login && onLogout && (
+              <>
+                {login}
+                <Button onClick={onLogout}>Déconnexion</Button>
+              </>
+            )}
+          </div>
         </div>
         {info && (
-          <p className="mt-1 text-sm text-white/50">
+          <p className="text-fg/50 mt-1 text-sm">
             Les modifications sont commitées sur{" "}
-            <code className="text-white/70">
+            <code className="text-fg/70">
               {info.repo}@{info.branch}
             </code>
             {info.deploys
@@ -226,9 +230,9 @@ function PublishBanner({ state }: { state: PublishState | null }) {
   if (!state) return null;
   const tone =
     state.step === "error"
-      ? "border-red-400/40 bg-red-950/30 text-red-200"
+      ? "border-danger/40 bg-danger/10 text-danger"
       : state.step === "done"
-        ? "border-emerald-400/40 bg-emerald-950/30 text-emerald-200"
+        ? "border-ok/40 bg-ok/10 text-ok"
         : "border-brand/50 bg-brand/10 text-brand-bright";
   return (
     <div className={`mb-6 rounded-xl border p-4 text-sm ${tone}`} role="status">
@@ -250,5 +254,26 @@ function PublishBanner({ state }: { state: PublishState | null }) {
         )}
       </p>
     </div>
+  );
+}
+
+const THEME_LABELS: Record<ThemePref, string> = {
+  system: "Thème : système",
+  light: "Thème : clair",
+  dark: "Thème : sombre",
+};
+
+function ThemeToggle() {
+  const [pref, setPref] = useState(readPref);
+  return (
+    <Button
+      onClick={() => {
+        const next = nextPref(pref);
+        applyPref(next);
+        setPref(next);
+      }}
+    >
+      {THEME_LABELS[pref]}
+    </Button>
   );
 }

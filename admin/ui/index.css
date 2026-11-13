@@ -1,17 +1,48 @@
 @import "tailwindcss";
 
-/* Mêmes jetons que le linktree (src/index.css). */
+/* Mode sombre piloté par data-theme (« système » = prefers-color-scheme, résolu dans theme.ts). */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Mêmes teintes que le linktree (src/index.css), en deux thèmes. */
+:root {
+  color-scheme: light;
+  --c-ink: #f3f6f8;
+  --c-ink-soft: #ffffff;
+  --c-ink-line: #d3dde4;
+  --c-fg: #0c1319;
+  --c-brand-bright: #2a6d94;
+  --c-danger: #b42318;
+  --c-warn: #a15c07;
+  --c-ok: #047857;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --c-ink: #0c1319;
+  --c-ink-soft: #141f27;
+  --c-ink-line: #22323d;
+  --c-fg: #ffffff;
+  --c-brand-bright: #5fb6de;
+  --c-danger: #fca5a5;
+  --c-warn: #fcd34d;
+  --c-ok: #6ee7b7;
+}
+
 @theme {
   --font-sans: Figtree, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-display: "Bricolage Grotesque", Figtree, system-ui, sans-serif;
 
   --color-brand: #398fba;
-  --color-brand-bright: #5fb6de;
   --color-brand-deep: #2a6d94;
 
-  --color-ink: #0c1319;
-  --color-ink-soft: #141f27;
-  --color-ink-line: #22323d;
+  --color-ink: var(--c-ink);
+  --color-ink-soft: var(--c-ink-soft);
+  --color-ink-line: var(--c-ink-line);
+  --color-fg: var(--c-fg);
+  --color-brand-bright: var(--c-brand-bright);
+  --color-danger: var(--c-danger);
+  --color-warn: var(--c-warn);
+  --color-ok: var(--c-ok);
 }
 
 @layer base {
@@ -20,7 +51,7 @@
   }
 
   body {
-    @apply bg-ink font-sans text-white antialiased;
+    @apply text-fg bg-ink font-sans antialiased;
   }
 
   h1,

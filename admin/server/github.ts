@@ -101,6 +101,37 @@ export class GitHubClient {
     return { commit: data.commit.sha, sha: data.content.sha };
   }
 
+  /** Crée un fichier binaire (contenu en base64) ; échoue s'il existe déjà. */
+  async createFile(
+    path: string,
+    base64: string,
+    message: string,
+  ): Promise<{ commit: string }> {
+    try {
+      const res = await this.call(`/contents/${encodePath(path)}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          message,
+          content: base64,
+          branch: this.settings.branch,
+        }),
+      });
+      const data = (await res.json()) as { commit?: { sha?: string } };
+      if (!data.commit?.sha) {
+        throw new GitHubError(
+          502,
+          "Réponse GitHub inattendue après le commit.",
+        );
+      }
+      return { commit: data.commit.sha };
+    } catch (error) {
+      if (error instanceof GitHubConflictError) {
+        throw new GitHubError(409, "Un fichier du même nom existe déjà.");
+      }
+      throw error;
+    }
+  }
+
   /** Dernier run du workflow pour ce commit, `null` tant qu'il n'a pas démarré. */
   async workflowRun(
     workflowFile: string,
