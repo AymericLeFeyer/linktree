@@ -59,7 +59,8 @@ redéploie la stack `linktree` et ne doit pas se recréer elle-même.
 ```
 admin/server/   # Node 24 SANS dépendance npm, TypeScript exécuté tel quel (type stripping)
 ├── main.ts / config.ts   # variables d'environnement
-├── app.ts                # routes + fichiers statiques + auth Basic
+├── auth.ts               # connexion GitHub (device flow), sessions en mémoire
+├── app.ts                # routes + fichiers statiques
 ├── github.ts             # API Contents (lire/commiter) + runs du workflow
 ├── publisher.ts          # suit commit → pipeline GitHub → déploiement Dockhand
 └── dockhand.ts           # POST /api/stacks/<stack>/deploy
@@ -69,17 +70,26 @@ admin/ui/       # React + Tailwind (vite.admin.config.ts → dist-admin/)
 Flux d'un enregistrement : l'UI valide avec `parseLinktree` (même parseur que le
 build) → `PUT /api/links { data, sha }` → le serveur **revalide** (et vérifie via
 l'API GitHub que les images locales `/x` existent dans `public/`) → commit direct
-sur `main` (`content: links (admin)`) → `Publisher` interroge le run de
-`release.yml` pour ce commit, puis, s'il est vert, redéploie la stack `linktree`
-(`pull` + `forceRecreate`). `sha` = sha du blob lu : modification concurrente
-(édition à la main sur GitHub) → 409, l'utilisateur recharge. Les liens
-n'apparaissent en ligne qu'après pipeline + déploiement (quelques minutes).
+sur `main` (`content: links (admin, <login>)`) → `Publisher` interroge le run de
+`release.yml` pour ce commit. Si `DOCKHAND_URL` est défini et la pipeline verte,
+il redéploie la stack `DOCKHAND_STACK` ; sinon il s'arrête à « image publiée »
+(cas actuel : le site tourne sur le Dockhand du VPS, qu'on ne touche pas, donc
+redéploiement manuel là-bas). `sha` = sha du blob lu : modification concurrente
+(édition à la main sur GitHub) → 409, l'utilisateur recharge.
 
-Variables : `GITHUB_TOKEN` (obligatoire, fine-grained : Contents RW + Actions R sur
-ce dépôt), `ADMIN_PASSWORD` (HTTP Basic, identifiant libre ; absent = interface
-ouverte), `DOCKHAND_URL` (absent = on s'arrête à l'image publiée), `DOCKHAND_STACK`
-(`linktree`), `DOCKHAND_ENV` (`1`), `GITHUB_REPO`, `GITHUB_BRANCH`,
-`GITHUB_WORKFLOW`, `PORT`. Dev : `npm run dev:admin-api` (lit `.env`) +
+**Authentification** : GitHub _device flow_ (`auth.ts`). L'utilisateur saisit un
+code sur github.com/login/device ; le serveur n'ouvre une session (cookie
+`linktree_admin`, HttpOnly, SameSite=Strict, 12 h, en mémoire) que si le compte a
+`permissions.push` sur le dépôt. **Toutes les lectures/écritures GitHub se font
+avec le jeton OAuth de l'utilisateur** (scope `repo`) : pas de PAT dans la
+configuration, commits attribués à la personne, et GitHub reste juge des droits.
+Pas de secret ni d'URL de callback : l'OAuth App n'a besoin que du Client ID
+(public), avec « Enable Device Flow » coché. L'admin est de toute façon derrière
+un VPN. Redémarrage du conteneur = reconnexion.
+
+Variables : `GITHUB_CLIENT_ID` (obligatoire), `GITHUB_REPO`, `GITHUB_BRANCH`,
+`GITHUB_WORKFLOW`, `PORT`, et facultatives `DOCKHAND_URL` / `DOCKHAND_STACK`
+(`linktree`) / `DOCKHAND_ENV` (`1`). Dev : `npm run dev:admin-api` (lit `.env`) +
 `npm run dev:admin` (Vite sur 5174, proxy `/api`).
 
 Points d'attention :

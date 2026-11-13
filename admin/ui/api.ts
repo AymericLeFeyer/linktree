@@ -39,8 +39,31 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
+export interface DeviceFlow {
+  flowId: string;
+  userCode: string;
+  verificationUri: string;
+  interval: number;
+  expiresIn: number;
+}
+
+export type PollResult =
+  | { status: "pending" | "expired" | "denied" }
+  | { status: "forbidden" | "ok"; login: string };
+
+const post = <T>(path: string, body: unknown = {}) =>
+  request<T>(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
 export const api = {
   info: () => request<Info>("/api/info"),
+  session: () => request<{ login: string }>("/api/session"),
+  startLogin: () => post<DeviceFlow>("/api/auth/device"),
+  pollLogin: (flowId: string) => post<PollResult>("/api/auth/poll", { flowId }),
+  logout: () => post("/api/auth/logout"),
   load: () => request<{ data: RawLinktree; sha: string }>("/api/links"),
   save: (data: RawLinktree, sha: string) =>
     request<{ sha: string; commit: string }>("/api/links", {

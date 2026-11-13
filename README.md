@@ -54,8 +54,9 @@ erreurs pendant la saisie.
 Plutôt que d'éditer `links.json` à la main : une interface web (`admin/`) liste
 et modifie le profil, les réseaux et les liens (ajout, ordre, date de fin…),
 commit sur `main`, attend la pipeline puis redéploie la stack Dockhand.
-Déploiement : `docker-compose.admin.yml` (stack `linktree-admin`), avec
-`GITHUB_TOKEN`, `ADMIN_PASSWORD` et `DOCKHAND_URL`. Détails dans `CLAUDE.md`.
+Connexion par compte GitHub (droit d'écriture sur le dépôt requis).
+Déploiement : `docker-compose.admin.yml` (stack `linktree-admin`), avec le seul
+`GITHUB_CLIENT_ID` d'une OAuth App. Détails dans `CLAUDE.md`.
 
 ## Développement
 

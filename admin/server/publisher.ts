@@ -10,8 +10,10 @@ export interface PublishState {
   updatedAt: number;
 }
 
+/** Cherche le run du workflow d'un commit (avec le jeton de l'utilisateur connecté). */
+export type RunLookup = (commit: string) => Promise<WorkflowRun | null>;
+
 export interface PublisherDeps {
-  workflowRun: (commit: string) => Promise<WorkflowRun | null>;
   /** Absent = Dockhand non configuré. */
   deploy?: () => Promise<void>;
   sleep?: (ms: number) => Promise<void>;
@@ -47,17 +49,21 @@ export class Publisher {
   }
 
   /** Lance le suivi ; la promesse se résout quand il est terminé (ou remplacé). */
-  track(commit: string): Promise<void> {
+  track(commit: string, workflowRun: RunLookup): Promise<void> {
     const generation = ++this.generation;
     this.set(generation, {
       commit,
       step: "pipeline",
       message: "Commit poussé, en attente de la pipeline GitHub…",
     });
-    return this.run(generation, commit);
+    return this.run(generation, commit, workflowRun);
   }
 
-  private async run(generation: number, commit: string): Promise<void> {
+  private async run(
+    generation: number,
+    commit: string,
+    workflowRun: RunLookup,
+  ): Promise<void> {
     const { sleep, now, pollMs, timeoutMs } = this.deps;
     const deadline = now() + timeoutMs;
     try {
@@ -70,7 +76,7 @@ export class Publisher {
             message: "Pipeline trop longue : suivi abandonné.",
           });
         }
-        const run = await this.deps.workflowRun(commit);
+        const run = await workflowRun(commit);
         if (run) {
           if (run.status === "completed") {
             if (run.conclusion === "success") break;

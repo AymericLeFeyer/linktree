@@ -1,4 +1,3 @@
-import { createHash, timingSafeEqual } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { extname, join, normalize, sep } from "node:path";
@@ -8,19 +7,29 @@ import {
   GitHubError,
   type GitHubClient,
 } from "./github.ts";
+import type { AuthService } from "./auth.ts";
 import type { Publisher } from "./publisher.ts";
 
 export const LINKS_FILE = "links.json";
 const MAX_BODY_BYTES = 1_000_000;
 const MAX_LOCAL_ASSETS = 60;
 
+type Repo = Pick<
+  GitHubClient,
+  "getFile" | "putFile" | "fileExists" | "workflowRun"
+>;
+
 export interface AppDeps {
-  github: Pick<GitHubClient, "getFile" | "putFile" | "fileExists">;
+  /** Client GitHub agissant au nom de l'utilisateur connecté (son jeton OAuth). */
+  githubFor: (token: string) => Repo;
+  auth: Pick<AuthService, "startFlow" | "pollFlow" | "session" | "logout">;
   publisher: Pick<Publisher, "state" | "track">;
   info: { repo: string; branch: string; deploys: boolean };
-  password?: string;
+  workflowFile: string;
   staticDir: string;
 }
+
+const COOKIE = "linktree_admin";
 
 const MIME: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -36,27 +45,57 @@ const MIME: Record<string, string> = {
 export function createApp(deps: AppDeps) {
   return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     try {
-      if (!isAuthorized(req, deps.password)) {
-        res.setHeader("WWW-Authenticate", 'Basic realm="Linktree admin"');
-        return sendJson(res, 401, { error: "Authentification requise." });
-      }
       const url = new URL(req.url ?? "/", "http://admin");
       const route = `${req.method} ${url.pathname}`;
+      const sessionId = readCookie(req, COOKIE);
 
       switch (route) {
         case "GET /api/info":
           return sendJson(res, 200, deps.info);
-        case "GET /api/links": {
-          const file = await deps.github.getFile(LINKS_FILE);
-          return sendJson(res, 200, {
-            data: JSON.parse(file.content),
-            sha: file.sha,
-          });
+        case "POST /api/auth/device":
+          return sendJson(res, 200, await deps.auth.startFlow());
+        case "POST /api/auth/poll": {
+          const body = JSON.parse(await readBody(req)) as { flowId?: unknown };
+          const result = await deps.auth.pollFlow(String(body.flowId ?? ""));
+          if (result.status === "ok") {
+            res.setHeader(
+              "Set-Cookie",
+              `${COOKIE}=${result.sessionId}; HttpOnly; SameSite=Strict; Path=/; Max-Age=43200`,
+            );
+            return sendJson(res, 200, { status: "ok", login: result.login });
+          }
+          return sendJson(res, 200, result);
         }
-        case "PUT /api/links":
-          return await saveLinks(req, res, deps);
-        case "GET /api/publish":
-          return sendJson(res, 200, { state: deps.publisher.state });
+        case "POST /api/auth/logout":
+          deps.auth.logout(sessionId);
+          res.setHeader(
+            "Set-Cookie",
+            `${COOKIE}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0`,
+          );
+          return sendJson(res, 200, {});
+      }
+
+      if (url.pathname.startsWith("/api/")) {
+        const session = deps.auth.session(sessionId);
+        if (!session) {
+          return sendJson(res, 401, { error: "Connexion GitHub requise." });
+        }
+        const github = deps.githubFor(session.token);
+        switch (route) {
+          case "GET /api/session":
+            return sendJson(res, 200, { login: session.login });
+          case "GET /api/links": {
+            const file = await github.getFile(LINKS_FILE);
+            return sendJson(res, 200, {
+              data: JSON.parse(file.content),
+              sha: file.sha,
+            });
+          }
+          case "PUT /api/links":
+            return await saveLinks(req, res, deps, github, session.login);
+          case "GET /api/publish":
+            return sendJson(res, 200, { state: deps.publisher.state });
+        }
       }
       if (url.pathname.startsWith("/api/")) {
         return sendJson(res, 404, { error: "Route inconnue." });
@@ -75,6 +114,8 @@ async function saveLinks(
   req: IncomingMessage,
   res: ServerResponse,
   deps: AppDeps,
+  github: Repo,
+  login: string,
 ): Promise<void> {
   const body = JSON.parse(await readBody(req)) as {
     data?: unknown;
@@ -84,25 +125,27 @@ async function saveLinks(
     return sendJson(res, 400, { error: "Corps attendu : { data, sha }." });
   }
 
-  const existing = await existingAssets(deps, body.data);
+  const existing = await existingAssets(github, body.data);
   const result = parseLinktree(body.data, {
     assetExists: (path) => existing.has(path),
   });
   if (!result.ok) return sendJson(res, 422, { errors: result.errors });
 
-  const saved = await deps.github.putFile(
+  const saved = await github.putFile(
     LINKS_FILE,
     `${JSON.stringify(body.data, null, 2)}\n`,
     body.sha,
-    "content: links (admin)",
+    `content: links (admin, ${login})`,
   );
-  void deps.publisher.track(saved.commit);
+  void deps.publisher.track(saved.commit, (commit) =>
+    github.workflowRun(deps.workflowFile, commit),
+  );
   return sendJson(res, 200, { sha: saved.sha, commit: saved.commit });
 }
 
 /** Chemins locaux (`/links/x.webp`) cités par le JSON qui existent dans `public/` du dépôt. */
 async function existingAssets(
-  deps: AppDeps,
+  github: Repo,
   data: unknown,
 ): Promise<Set<string>> {
   const paths = new Set<string>();
@@ -127,7 +170,7 @@ async function existingAssets(
     .slice(0, MAX_LOCAL_ASSETS);
   await Promise.all(
     candidates.map(async (path) => {
-      if (await deps.github.fileExists(`public${path}`)) found.add(path);
+      if (await github.fileExists(`public${path}`)) found.add(path);
     }),
   );
   return found;
@@ -213,18 +256,12 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
   res.end(JSON.stringify(body));
 }
 
-/** HTTP Basic : seul le mot de passe compte, l'identifiant est libre. */
-function isAuthorized(req: IncomingMessage, password?: string): boolean {
-  if (!password) return true;
-  const header = req.headers.authorization ?? "";
-  if (!header.startsWith("Basic ")) return false;
-  const decoded = Buffer.from(header.slice(6), "base64").toString("utf8");
-  const given = decoded.slice(decoded.indexOf(":") + 1);
-  return timingSafeEqual(digest(given), digest(password));
-}
-
-function digest(value: string): Buffer {
-  return createHash("sha256").update(value).digest();
+function readCookie(req: IncomingMessage, name: string): string | undefined {
+  for (const part of (req.headers.cookie ?? "").split(";")) {
+    const [key, ...value] = part.trim().split("=");
+    if (key === name) return value.join("=");
+  }
+  return undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

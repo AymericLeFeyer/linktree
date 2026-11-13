@@ -11,11 +11,14 @@ const run = (status: string, conclusion: string | null): WorkflowRun => ({
 
 function make(runs: (WorkflowRun | null)[], deploy?: () => Promise<void>) {
   const queue = [...runs];
-  return new Publisher({
-    workflowRun: async () => (queue.length > 1 ? queue.shift()! : queue[0]),
-    deploy,
-    sleep: async () => undefined,
-  });
+  const lookup = async () => (queue.length > 1 ? queue.shift()! : queue[0]);
+  const publisher = new Publisher({ deploy, sleep: async () => undefined });
+  return {
+    track: (commit: string) => publisher.track(commit, lookup),
+    get state() {
+      return publisher.state;
+    },
+  };
 }
 
 describe("Publisher", () => {
@@ -60,9 +63,9 @@ describe("Publisher", () => {
   });
 
   it("un nouveau commit remplace le suivi précédent", async () => {
+    const lookup = async (commit: string) =>
+      commit === "second" ? run("completed", "success") : null;
     const publisher = new Publisher({
-      workflowRun: async (commit) =>
-        commit === "second" ? run("completed", "success") : null,
       sleep: async () => undefined,
       now: (() => {
         let t = 0;
@@ -70,8 +73,8 @@ describe("Publisher", () => {
       })(),
       timeoutMs: 50,
     });
-    const first = publisher.track("first");
-    await publisher.track("second");
+    const first = publisher.track("first", lookup);
+    await publisher.track("second", lookup);
     await first;
     expect(publisher.state).toMatchObject({ commit: "second", step: "done" });
   });
@@ -79,12 +82,11 @@ describe("Publisher", () => {
   it("abandonne après le délai", async () => {
     let t = 0;
     const publisher = new Publisher({
-      workflowRun: async () => null,
       sleep: async () => undefined,
       now: () => (t += 1000),
       timeoutMs: 5000,
     });
-    await publisher.track("abc");
+    await publisher.track("abc", async () => null);
     expect(publisher.state?.step).toBe("error");
   });
 });

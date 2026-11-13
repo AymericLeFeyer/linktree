@@ -3,6 +3,7 @@ import { parseLinktree } from "../../src/domain/link/services/parseLinktree.ts";
 import { api, ApiError, type Info, type PublishState } from "./api.ts";
 import { LinksEditor, ProfileEditor, SocialsEditor } from "./Editors.tsx";
 import { Button } from "./fields.tsx";
+import { Login } from "./Login.tsx";
 import { cleanForSave, type RawLinktree } from "./model.ts";
 
 interface Loaded {
@@ -18,21 +19,27 @@ export function App() {
   const [saving, setSaving] = useState(false);
   const [saveErrors, setSaveErrors] = useState<string[]>([]);
   const [publish, setPublish] = useState<PublishState | null>(null);
+  const [login, setLogin] = useState<string | null>(null);
+  const [needsLogin, setNeedsLogin] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const [loadedInfo, file, state] = await Promise.all([
-        api.info(),
-        api.load(),
-        api.publish(),
-      ]);
+      const loadedInfo = await api.info();
       setInfo(loadedInfo);
+      const session = await api.session();
+      const [file, state] = await Promise.all([api.load(), api.publish()]);
+      setLogin(session.login);
+      setNeedsLogin(false);
       setSaved(file);
       setDraft(file.data);
       setPublish(state);
       setLoadError(null);
     } catch (error) {
-      setLoadError(error instanceof Error ? error.message : String(error));
+      if (error instanceof ApiError && error.status === 401) {
+        setNeedsLogin(true);
+      } else {
+        setLoadError(error instanceof Error ? error.message : String(error));
+      }
     }
   }, []);
 
@@ -79,7 +86,9 @@ export function App() {
         message: "Commit poussé, en attente de la pipeline GitHub…",
       });
     } catch (error) {
-      if (error instanceof ApiError) {
+      if (error instanceof ApiError && error.status === 401) {
+        setNeedsLogin(true);
+      } else if (error instanceof ApiError) {
         setSaveErrors(error.errors.length > 0 ? error.errors : [error.message]);
       } else {
         setSaveErrors([String(error)]);
@@ -89,6 +98,13 @@ export function App() {
     }
   }
 
+  if (needsLogin) {
+    return (
+      <Shell>
+        <Login onLoggedIn={() => void load()} />
+      </Shell>
+    );
+  }
   if (loadError) {
     return (
       <Shell>
@@ -111,7 +127,17 @@ export function App() {
 
   const shown = [...errors, ...saveErrors];
   return (
-    <Shell info={info}>
+    <Shell
+      info={info}
+      login={login}
+      onLogout={() => {
+        void api.logout().then(() => {
+          setDraft(null);
+          setSaved(null);
+          setNeedsLogin(true);
+        });
+      }}
+    >
       <PublishBanner state={publish} />
       <div className="space-y-6 pb-32">
         <ProfileEditor data={draft} onChange={setDraft} />
@@ -154,13 +180,31 @@ export function App() {
   );
 }
 
-function Shell({ info, children }: { info?: Info; children: React.ReactNode }) {
+function Shell({
+  info,
+  login,
+  onLogout,
+  children,
+}: {
+  info?: Info;
+  login?: string | null;
+  onLogout?: () => void;
+  children: React.ReactNode;
+}) {
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
       <header className="mb-6">
-        <h1 className="text-2xl font-bold">
-          Linktree <span className="text-brand-bright">admin</span>
-        </h1>
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-2xl font-bold">
+            Linktree <span className="text-brand-bright">admin</span>
+          </h1>
+          {login && onLogout && (
+            <div className="flex items-center gap-3 text-sm text-white/60">
+              {login}
+              <Button onClick={onLogout}>Déconnexion</Button>
+            </div>
+          )}
+        </div>
         {info && (
           <p className="mt-1 text-sm text-white/50">
             Les modifications sont commitées sur{" "}

@@ -1,12 +1,11 @@
 # Interface d'admin du linktree — image publiée sur GHCR par la même pipeline.
-# À déployer comme stack Dockhand séparée (« linktree-admin ») : l'admin
-# redéploie la stack « linktree » et ne doit pas se recréer lui-même.
+# À déployer comme stack Dockhand séparée (« linktree-admin »).
 #
-# Variables (onglet Environnement de la stack) :
-#   GITHUB_TOKEN    jeton fine-grained sur le dépôt linktree : Contents (lecture
-#                   et écriture) + Actions (lecture). Obligatoire.
-#   ADMIN_PASSWORD  mot de passe de l'interface (identifiant libre). Fortement conseillé.
-#   DOCKHAND_URL    ex. http://192.168.68.87:3000 ; vide = pas de redéploiement auto.
+# Connexion par GitHub (device flow) : seuls les comptes ayant le droit
+# d'écriture sur le dépôt peuvent modifier les liens, et les commits sont faits
+# avec leur propre jeton. Rien d'autre à configurer que le Client ID (public) :
+#   GITHUB_CLIENT_ID  Client ID d'une OAuth App GitHub, case « Enable Device
+#                     Flow » cochée (github.com/settings/developers). Obligatoire.
 
 services:
   linktree-admin:
@@ -17,10 +16,6 @@ services:
     ports:
       - "${LINKTREE_ADMIN_PORT:-8083}:8083"
     environment:
-      GITHUB_TOKEN: ${GITHUB_TOKEN:?jeton GitHub obligatoire}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:?Client ID de l'OAuth App GitHub obligatoire}
       GITHUB_REPO: ${GITHUB_REPO:-AymericLeFeyer/linktree}
       GITHUB_BRANCH: ${GITHUB_BRANCH:-main}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
-      DOCKHAND_URL: ${DOCKHAND_URL:-}
-      DOCKHAND_STACK: ${DOCKHAND_STACK:-linktree}
-      DOCKHAND_ENV: ${DOCKHAND_ENV:-1}

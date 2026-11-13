@@ -21,25 +21,53 @@ async function start(overrides: Partial<AppDeps> = {}) {
     })),
     putFile: vi.fn(async () => ({ commit: "commit2", sha: "blob2" })),
     fileExists: vi.fn(async () => true),
+    workflowRun: vi.fn(async () => null),
   };
+  const githubFor = vi.fn((token: string) => {
+    void token;
+    return github;
+  });
   const publisher = { state: null, track: vi.fn(async () => undefined) };
+  const auth = {
+    startFlow: vi.fn(async () => ({
+      flowId: "f1",
+      userCode: "ABCD-1234",
+      verificationUri: "https://github.com/login/device",
+      interval: 5,
+      expiresIn: 900,
+    })),
+    pollFlow: vi.fn(async () => ({
+      status: "ok" as const,
+      sessionId: "sid",
+      login: "aymeric",
+    })),
+    session: vi.fn((id: string | undefined) =>
+      id === "sid"
+        ? { token: "gho_user", login: "aymeric", expiresAt: Infinity }
+        : undefined,
+    ),
+    logout: vi.fn(),
+  };
   const app = createApp({
-    github,
+    githubFor,
+    auth,
     publisher,
-    info: { repo: "o/r", branch: "main", deploys: true },
+    info: { repo: "o/r", branch: "main", deploys: false },
+    workflowFile: "release.yml",
     staticDir: "dist-admin",
     ...overrides,
   });
   server = createServer((req, res) => void app(req, res));
   await new Promise<void>((resolve) => server!.listen(0, resolve));
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
-  return { github, publisher, base };
+  return { github, githubFor, publisher, auth, base };
 }
 
+const logged = { Cookie: "linktree_admin=sid" };
 const put = (
   base: string,
   body: unknown,
-  headers: Record<string, string> = {},
+  headers: Record<string, string> = logged,
 ) =>
   fetch(`${base}/api/links`, {
     method: "PUT",
@@ -48,10 +76,44 @@ const put = (
   });
 
 describe("admin app", () => {
-  it("renvoie links.json et son sha", async () => {
+  it("refuse l'API sans session", async () => {
+    const { base, github } = await start();
+    expect((await fetch(`${base}/api/links`)).status).toBe(401);
+    expect((await put(base, { data: VALID, sha: "x" }, {})).status).toBe(401);
+    expect(github.getFile).not.toHaveBeenCalled();
+  });
+
+  it("pose le cookie de session à la connexion", async () => {
     const { base } = await start();
-    const res = await fetch(`${base}/api/links`);
+    const res = await fetch(`${base}/api/auth/poll`, {
+      method: "POST",
+      body: JSON.stringify({ flowId: "f1" }),
+    });
+    expect(await res.json()).toEqual({ status: "ok", login: "aymeric" });
+    const cookie = res.headers.get("set-cookie") ?? "";
+    expect(cookie).toContain("linktree_admin=sid");
+    expect(cookie).toContain("HttpOnly");
+  });
+
+  it("ne crée pas de session si le compte n'a pas le droit d'écriture", async () => {
+    const { base, auth } = await start();
+    auth.pollFlow.mockResolvedValue({
+      status: "forbidden",
+      login: "intrus",
+    } as never);
+    const res = await fetch(`${base}/api/auth/poll`, {
+      method: "POST",
+      body: JSON.stringify({ flowId: "f1" }),
+    });
+    expect(res.headers.get("set-cookie")).toBeNull();
+    expect(await res.json()).toEqual({ status: "forbidden", login: "intrus" });
+  });
+
+  it("agit avec le jeton de l'utilisateur et renvoie links.json", async () => {
+    const { base, githubFor } = await start();
+    const res = await fetch(`${base}/api/links`, { headers: logged });
     expect(await res.json()).toEqual({ data: VALID, sha: "blob1" });
+    expect(githubFor).toHaveBeenCalledWith("gho_user");
   });
 
   it("commit un contenu valide et lance le suivi", async () => {
@@ -62,9 +124,12 @@ describe("admin app", () => {
       "links.json",
       `${JSON.stringify(VALID, null, 2)}\n`,
       "blob1",
-      expect.any(String),
+      "content: links (admin, aymeric)",
     );
-    expect(publisher.track).toHaveBeenCalledWith("commit2");
+    expect(publisher.track).toHaveBeenCalledWith(
+      "commit2",
+      expect.any(Function),
+    );
   });
 
   it("refuse un contenu invalide sans rien commiter", async () => {
@@ -91,23 +156,6 @@ describe("admin app", () => {
   it("signale une modification concurrente (409)", async () => {
     const { base, github } = await start();
     github.putFile.mockRejectedValue(new GitHubConflictError());
-    const res = await put(base, { data: VALID, sha: "old" });
-    expect(res.status).toBe(409);
-  });
-
-  it("exige le mot de passe quand il est défini", async () => {
-    const { base } = await start({ password: "secret" });
-    expect((await fetch(`${base}/api/info`)).status).toBe(401);
-    const auth = `Basic ${Buffer.from("x:secret").toString("base64")}`;
-    const ok = await fetch(`${base}/api/info`, {
-      headers: { Authorization: auth },
-    });
-    expect(ok.status).toBe(200);
-    const bad = await fetch(`${base}/api/info`, {
-      headers: {
-        Authorization: `Basic ${Buffer.from("x:nope").toString("base64")}`,
-      },
-    });
-    expect(bad.status).toBe(401);
+    expect((await put(base, { data: VALID, sha: "old" })).status).toBe(409);
   });
 });
