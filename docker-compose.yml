@@ -1,4 +1,4 @@
-# Linktree AyLabs — image publiée sur GHCR par .github/workflows/deploy.yml
+# Linktree AyLabs — image publiée sur GHCR par .github/workflows/release.yml
 # à chaque push sur main.
 #
 #   docker compose pull && docker compose up -d

@@ -67,7 +67,7 @@ npm run check    # lint + format + tests + build, comme la CI
 
 ## Déploiement
 
-`.github/workflows/deploy.yml`, à chaque push sur `main` : vérifications puis
+`.github/workflows/release.yml`, à chaque push sur `main` : vérifications puis
 image `ghcr.io/aymericlefeyer/linktree` (tags `latest`, `sha-…`, date). Les pull
 requests passent les vérifications sans publier d'image.
 
