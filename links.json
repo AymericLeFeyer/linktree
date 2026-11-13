@@ -7,12 +7,30 @@
     "avatar": "/aylabs.jpg"
   },
   "socials": [
-    { "platform": "youtube", "url": "https://youtube.com/@ay_labs" },
-    { "platform": "instagram", "url": "https://instagram.com/aylabs_yt" },
-    { "platform": "tiktok", "url": "https://www.tiktok.com/@ay_labs" },
-    { "platform": "discord", "url": "https://discord.gg/aylabs" },
-    { "platform": "github", "url": "https://github.com/aylabscode" },
-    { "platform": "email", "url": "mailto:contact@aylabs.fr" },
+    {
+      "platform": "youtube",
+      "url": "https://youtube.com/@ay_labs"
+    },
+    {
+      "platform": "instagram",
+      "url": "https://instagram.com/aylabs_yt"
+    },
+    {
+      "platform": "tiktok",
+      "url": "https://www.tiktok.com/@ay_labs"
+    },
+    {
+      "platform": "discord",
+      "url": "https://discord.gg/aylabs"
+    },
+    {
+      "platform": "github",
+      "url": "https://github.com/aylabscode"
+    },
+    {
+      "platform": "email",
+      "url": "mailto:contact@aylabs.fr"
+    },
     {
       "platform": "website",
       "url": "https://aylabs.fr",
@@ -20,6 +38,14 @@
     }
   ],
   "links": [
+    {
+      "title": "Black Friday Domadoo !",
+      "url": "https://aylabs.fr/domadoo",
+      "featured": true,
+      "expiresAt": "2026-11-30",
+      "description": "Profitez de réductions exclusives pour cette fin d'année ",
+      "image": "https://www.domadoo.fr/img/favicon.ico?1712752227"
+    },
     {
       "title": "Envie d'essayer les toilettes à la japonaise ?",
       "description": "Confort et hygiène sont au rendez-vous, sans oublier l'installation ultra simplifiée car il s'installe à la place de votre ancien abattant.",
