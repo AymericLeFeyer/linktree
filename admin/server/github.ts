@@ -150,7 +150,7 @@ export class GitHubClient {
     const detail = await res.text().catch(() => "");
     const hint =
       res.status === 401 || res.status === 403
-        ? " Vérifier GITHUB_TOKEN (Contents : lecture/écriture, Actions : lecture)."
+        ? " Le compte connecté a-t-il toujours accès au dépôt ?"
         : "";
     throw new GitHubError(
       res.status,
