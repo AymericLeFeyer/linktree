@@ -196,8 +196,11 @@ function Shell({
     <main className="mx-auto max-w-3xl px-4 py-8">
       <header className="mb-6">
         <div className="flex items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold">
-            Linktree <span className="text-brand-bright">admin</span>
+          <h1 className="flex items-center gap-3 text-2xl font-bold">
+            <img src="/linktree.svg" alt="" className="h-9 w-9" />
+            <span>
+              Linktree <span className="text-brand-bright">admin</span>
+            </span>
           </h1>
           <div className="text-fg/60 flex items-center gap-3 text-sm">
             <ThemeToggle />
